@@ -1,0 +1,21 @@
+name = "community-metadata"
+debug = false
+timezone = "PRC"
+httpPort = 9500
+
+[log]
+logFile = "/data/logs/{hostname}_run_application-{date}.log"
+errFile = "/data/logs/{hostname}_run_error-{date}.log"
+
+[cache]
+disable = true
+db = 1
+auth = "123456"
+server = "127.0.0.1:6379"
+prefix = "cache"
+
+[redis]
+disable = true
+db = 2
+auth = "123456"
+server = "127.0.0.1:6379"

@@ -1,0 +1,5 @@
+debug = true
+httpPort = 9500
+[log]
+logFile = "./logs/info-{date}.log"
+errFile = "./logs/error-{date}.log"
