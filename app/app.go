@@ -16,6 +16,8 @@ const (
 	BaseConfigFile  = "app.toml"
 	DefaultHttpPort = 9500
 	DefaultAppName  = "community-metadata"
+	DefaultInterval = 60
+	DefaultSyncChannelSize = 100
 )
 
 var (

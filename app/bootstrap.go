@@ -23,14 +23,14 @@ func Bootstrap(configDir string) {
 	initAppEnv()
 	//Load config
 	loadConfig(configDir)
-	color.Info.Printf(
-		"================= Bootstrap (EnvName: %s, Debug: %v) ==================\n",
-		EnvName, Debug,
-	)
 	//init app
 	initAppInfo()
 	//init logger
 	initLogger()
+	color.Info.Printf(
+		"============ Bootstrap (EnvName: %s, Debug: %v) ============\n",
+		EnvName, Debug,
+	)
 }
 
 func initAppInfo() {

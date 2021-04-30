@@ -14,8 +14,7 @@ auth = "123456"
 server = "127.0.0.1:6379"
 prefix = "cache"
 
-[redis]
-disable = true
-db = 2
-auth = "123456"
-server = "127.0.0.1:6379"
+[manager]
+syncInterval = 30
+notifyInterval = 30
+baseFolder = "/data/repos/"

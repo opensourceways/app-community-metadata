@@ -4,6 +4,7 @@ import (
 	"github.com/gookit/color"
 	"github.com/opensourceways/app-community-metadata/app"
 	"github.com/opensourceways/app-community-metadata/application"
+	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	"github.com/opensourceways/app-community-metadata/cache"
 	"os"
 	"os/signal"
@@ -18,8 +19,17 @@ func init() {
 }
 func main() {
 	listenSignals()
+	//init manager
+	manager, err := gitsync.NewSyncManager()
+	if err != nil {
+		os.Exit(1)
+	}
+	err = manager.StartLoop()
+	if err != nil {
+		os.Exit(1)
+	}
 	// init services
-	color.Info.Printf("======================== Begin Running(PID: %d) ========================\n", os.Getpid())
+	color.Info.Printf("============  Begin Running(PID: %d) ============\n", os.Getpid())
 	application.Run()
 }
 

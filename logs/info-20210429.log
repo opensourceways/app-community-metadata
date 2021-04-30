@@ -14,3 +14,7 @@
 {"L":"INFO","T":"2021-04-29T10:42:31.861+0800","M":"complete request","hostname":"TommyLikeHus-MacBook-Pro.local","req_id":"f0711b20cf54db36315417139cd20ee1","context":{"req_date":"2021-04-29 10:42:31","method":"GET","uri":"/123","client_ip":"127.0.0.1","http_status":404,"elapsed_time":"0.065","post_data":""}}
 {"L":"INFO","T":"2021-04-29T10:43:54.960+0800","M":"logger construction succeeded","hostname":"TommyLikeHus-MacBook-Pro.local"}
 {"L":"INFO","T":"2021-04-29T10:44:06.726+0800","M":"logger construction succeeded","hostname":"TommyLikeHus-MacBook-Pro.local"}
+{"L":"INFO","T":"2021-04-29T10:48:14.286+0800","M":"logger construction succeeded","hostname":"TommyLikeHus-MacBook-Pro.local"}
+{"L":"INFO","T":"2021-04-29T10:49:30.078+0800","M":"logger construction succeeded","hostname":"TommyLikeHus-MacBook-Pro.local"}
+{"L":"INFO","T":"2021-04-29T10:49:39.366+0800","M":"complete request","hostname":"TommyLikeHus-MacBook-Pro.local","req_id":"5a84b442d4dd08db96bc40e29b717dc9","context":{"req_date":"2021-04-29 10:49:39","method":"GET","uri":"/123","client_ip":"127.0.0.1","http_status":404,"elapsed_time":"0.071","post_data":""}}
+{"L":"INFO","T":"2021-04-29T10:49:41.029+0800","M":"complete request","hostname":"TommyLikeHus-MacBook-Pro.local","req_id":"8157a1c09f52c1e530f72341fb6a1a68","context":{"req_date":"2021-04-29 10:49:41","method":"GET","uri":"/123","client_ip":"127.0.0.1","http_status":404,"elapsed_time":"0.041","post_data":""}}
