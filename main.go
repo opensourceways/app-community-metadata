@@ -20,7 +20,7 @@ func init() {
 func main() {
 	listenSignals()
 	//init manager
-	manager, err := gitsync.NewSyncManager()
+	manager, err := gitsync.NewSyncManager(application.Server().Group("/v1/metadata"))
 	if err != nil {
 		os.Exit(1)
 	}

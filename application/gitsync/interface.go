@@ -9,6 +9,17 @@ const (
 	Ssh  RepoSchema = "ssh"
 )
 
+const (
+	AllFiles = "*"
+)
+
+type GitEvent struct {
+	GroupName string
+	RepoName  string
+	Files     []string
+}
+
+
 type GitMeta struct {
 	//Git repo to watch
 	Repo string
@@ -20,6 +31,11 @@ type GitMeta struct {
 	Schema RepoSchema
 	//Files to watch, relatively
 	WatchFiles []string
+}
+
+type GitMetaContainer struct {
+	Meta *GitMeta
+	Ready	bool
 }
 
 type PluginMeta struct {
@@ -36,11 +52,17 @@ type PluginMeta struct {
 type Plugin interface {
 	GetMeta() *PluginMeta
 	Load(files map[string][]string) error
-	RegisterEndpoints(group gin.RouterGroup)
+	RegisterEndpoints(group *gin.RouterGroup)
+}
+
+type EventFilter interface {
+	StartLoop()
 }
 
 type Runner interface {
-	StartLoop() error
+
+	GetRepo() *GitMeta
+	StartLoop()
 	Close() error
 }
 

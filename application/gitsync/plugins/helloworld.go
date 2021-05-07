@@ -18,10 +18,10 @@ func (h *HelloWorldPlugin) GetMeta() *gitsync.PluginMeta {
 	}
 }
 
-func (h *HelloWorldPlugin) Load(filesmap map[string][]string) error {
+func (h *HelloWorldPlugin) Load(files map[string][]string) error {
 	return nil
 }
 
-func (h *HelloWorldPlugin) RegisterEndpoints(group gin.RouterGroup) {
+func (h *HelloWorldPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 	return
 }
