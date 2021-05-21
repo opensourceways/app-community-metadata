@@ -7,13 +7,13 @@ import (
 )
 
 type PluginContainer struct {
-	Plugin Plugin
-	Ready bool
-	Channel chan *GitEvent
-	FlushChannel chan int
-	logger		   *zap.Logger
-	eventContainer  map[string][]string
-	eventMutex sync.Mutex
+	Plugin         Plugin
+	Ready          bool
+	Channel        chan *GitEvent
+	FlushChannel   chan int
+	logger         *zap.Logger
+	eventContainer map[string][]string
+	eventMutex     sync.Mutex
 }
 
 func NewPluginContainer(p Plugin, l *zap.Logger) *PluginContainer {
@@ -22,11 +22,11 @@ func NewPluginContainer(p Plugin, l *zap.Logger) *PluginContainer {
 		container[repo.Repo] = make([]string, 0)
 	}
 	return &PluginContainer{
-		Plugin: p,
-		Ready: false,
-		Channel: make(chan *GitEvent, 50),
-		FlushChannel: make(chan int, 10),
-		logger: l,
+		Plugin:         p,
+		Ready:          false,
+		Channel:        make(chan *GitEvent, 50),
+		FlushChannel:   make(chan int, 10),
+		logger:         l,
 		eventContainer: container,
 	}
 }
@@ -52,44 +52,44 @@ func (p *PluginContainer) FlushEvents() map[string][]string {
 func (p *PluginContainer) StartLoop() {
 	for {
 		select {
-			case event, ok := <- p.Channel:
-				if !ok{
-					p.logger.Info(fmt.Sprintf(
-						"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
-				}
-				if event.GroupName == p.Plugin.GetMeta().Group {
-					r := GetRepo(p.Plugin.GetMeta().Repos, event.RepoName)
-					if r != nil {
-						eventCount := 0
-						for _, f := range event.Files {
-							if StringInclude(r.WatchFiles, f) {
-								p.AddEvents(r.Repo, f)
-								eventCount += 1
-							}
-						}
-						if eventCount != 0 {
-							p.logger.Info(fmt.Sprintf(
-								"plugin container[%s] received git event with %d file changes",
-								p.Plugin.GetMeta().Name, eventCount))
+		case event, ok := <-p.Channel:
+			if !ok {
+				p.logger.Info(fmt.Sprintf(
+					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
+			}
+			if event.GroupName == p.Plugin.GetMeta().Group {
+				r := GetRepo(p.Plugin.GetMeta().Repos, event.RepoName)
+				if r != nil {
+					eventCount := 0
+					for _, f := range event.Files {
+						if StringInclude(r.WatchFiles, f) {
+							p.AddEvents(r.Repo, f)
+							eventCount += 1
 						}
 					}
-				}
-			case _, ok := <- p.FlushChannel:
-				if !ok {
-					p.logger.Info(fmt.Sprintf(
-						"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
-				}
-				files := p.FlushEvents()
-				if len(files) != 0 {
-					err := p.Plugin.Load(files)
-					if err != nil {
-						p.logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
-							p.Plugin.GetMeta().Name, err))
-					} else {
-						p.logger.Info(fmt.Sprintf("plugin container[%s] triggered LOAD function",
-							p.Plugin.GetMeta().Name))
+					if eventCount != 0 {
+						p.logger.Info(fmt.Sprintf(
+							"plugin container[%s] received git event with %d file changes",
+							p.Plugin.GetMeta().Name, eventCount))
 					}
 				}
+			}
+		case _, ok := <-p.FlushChannel:
+			if !ok {
+				p.logger.Info(fmt.Sprintf(
+					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
+			}
+			files := p.FlushEvents()
+			if len(files) != 0 {
+				err := p.Plugin.Load(files)
+				if err != nil {
+					p.logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
+						p.Plugin.GetMeta().Name, err))
+				} else {
+					p.logger.Info(fmt.Sprintf("plugin container[%s] triggered LOAD function",
+						p.Plugin.GetMeta().Name))
+				}
+			}
 		}
 	}
 }

@@ -2,9 +2,9 @@ package gitsync
 
 import (
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strings"
-	"errors"
 )
 
 func GetRepoLocalName(repo string) string {

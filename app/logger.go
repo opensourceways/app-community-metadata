@@ -14,8 +14,8 @@ var Logger *zap.Logger
 
 // initLog init log setting
 func initLogger() {
-	// newGenericLogger()
-	newRotatedLogger()
+	newGenericLogger()
+	//newRotatedLogger()
 
 	Logger.Info("logger construction succeeded")
 }
@@ -45,8 +45,8 @@ func newGenericLogger() {
 		cfg = zap.NewProductionConfig()
 		cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 		cfg.Development = true
-		cfg.OutputPaths = []string{"stdout", logFile}
-		cfg.ErrorOutputPaths = []string{"stderr", errFile}
+		cfg.OutputPaths = []string{"stdout"}
+		cfg.ErrorOutputPaths = []string{"stderr"}
 	} else {
 		cfg = zap.NewProductionConfig()
 		cfg.OutputPaths = []string{logFile}

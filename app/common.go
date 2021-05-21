@@ -6,4 +6,3 @@ import "time"
 func LocTime() time.Time {
 	return time.Now().Local()
 }
-

@@ -6,7 +6,6 @@ import (
 )
 
 type HelloWorldPlugin struct {
-	
 }
 
 func NewHelloWorldPlugin() gitsync.Plugin {
@@ -15,6 +14,20 @@ func NewHelloWorldPlugin() gitsync.Plugin {
 
 func (h *HelloWorldPlugin) GetMeta() *gitsync.PluginMeta {
 	return &gitsync.PluginMeta{
+		Name:        "helloworld",
+		Group:       "sample",
+		Description: "used for demonstration",
+		Repos: []gitsync.GitMeta{
+			{
+				Repo:       "https://github.com/TommyLike/SampleApp",
+				Branch:     "master",
+				SubModules: true,
+				Schema:     gitsync.Https,
+				WatchFiles: []string{
+					"README.md",
+				},
+			},
+		},
 	}
 }
 

@@ -7,24 +7,25 @@ import (
 	"github.com/gookit/color"
 	"github.com/gookit/goutil/fsutil"
 	"github.com/opensourceways/app-community-metadata/app"
-	"github.com/opensourceways/app-community-metadata/application/gitsync/runner"
 	"go.uber.org/zap"
 	"math"
+	"os"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
 var (
-	pluginMutex sync.RWMutex
+	pluginMutex      sync.RWMutex
 	pluginsContainer = map[string]*PluginContainer{}
 	//repo organized as below:
 	//group1:
 	//		repo1
 	//		repo2
 	repoContainer = map[string]map[string]*GitMetaContainer{}
-	repoMutex  sync.RWMutex
+	repoMutex     sync.RWMutex
 )
 
 type SyncManager struct {
@@ -32,10 +33,10 @@ type SyncManager struct {
 	baseFolder     string
 	eventCh        chan *GitEvent
 	notifyInterval int
-	Runners 	   map[string]Runner
-	logger		   *zap.Logger
-	events			map[string]*GitEvent
-	group			 *gin.RouterGroup
+	Runners        map[string]Runner
+	logger         *zap.Logger
+	events         map[string]*GitEvent
+	group          *gin.RouterGroup
 }
 
 func NewSyncManager(group *gin.RouterGroup) (*SyncManager, error) {
@@ -54,14 +55,14 @@ func NewSyncManager(group *gin.RouterGroup) (*SyncManager, error) {
 		int(syncInterval), int(notifyInterval), baseFolder)
 
 	return &SyncManager{
-		SyncInterval: int(syncInterval),
+		SyncInterval:   int(syncInterval),
 		notifyInterval: int(notifyInterval),
-		baseFolder: baseFolder,
-		eventCh: make(chan *GitEvent, app.DefaultSyncChannelSize),
-		logger: app.Logger,
-		Runners: make(map[string]Runner),
-		events: make(map[string]*GitEvent),
-		group: group,
+		baseFolder:     baseFolder,
+		eventCh:        make(chan *GitEvent, app.DefaultSyncChannelSize),
+		logger:         app.Logger,
+		Runners:        make(map[string]Runner),
+		events:         make(map[string]*GitEvent),
+		group:          group,
 	}, nil
 }
 
@@ -113,28 +114,6 @@ func (s *SyncManager) dispatchFlushEvents(event int) {
 	}
 }
 
-func (s *SyncManager) flushEvents() {
-	if len(s.events) == 0 {
-		s.logger.Info("event empty, cancel notify plugins")
-		return
-	}
-	defer eventMutex.RUnlock()
-	eventMutex.RLock()
-	//loop plugins
-	defer pluginMutex.RUnlock()
-	pluginMutex.RLock()
-	for key, p := range pluginsContainer {
-		files = make(map[string][]string)
-		for _, meta := range p.Plugin.GetMeta().Repos {
-
-		}
-
-	}
-
-
-
-}
-
 func (s *SyncManager) GetBaseFolder() string {
 	return s.baseFolder
 }
@@ -146,7 +125,7 @@ func Register(pluginName string, plugin Plugin) {
 	//update plugin
 	pluginsContainer[pluginName] = &PluginContainer{
 		Plugin: plugin,
-		Ready: false,
+		Ready:  false,
 	}
 	//update repo
 	for _, repo := range plugin.GetMeta().Repos {
@@ -155,7 +134,7 @@ func Register(pluginName string, plugin Plugin) {
 			color.Error.Printf("failed to get local name of %s", repo.Repo)
 		}
 		updateRepoContainer(plugin.GetMeta().Group, localName, &repo)
-		color.Info.Printf("plugin %s registered to manager", plugin.GetMeta().Name)
+		color.Info.Printf("plugin %s registered to manager\n", plugin.GetMeta().Name)
 	}
 }
 
@@ -171,41 +150,41 @@ func updateRepoContainer(group, localName string, repo *GitMeta) {
 				color.Error.Printf(
 					"failed to compare url equality between %s and %s, err %v", g.Meta.Repo, repo.Repo, err)
 			}
-			if ! equal {
+			if !equal {
 				color.Error.Printf(
 					"repo %s skipped due to the existence of same local repo while remote url differs %s and %s",
 					g.Meta.Repo, repo.Repo)
 			} else {
 				g.Meta.WatchFiles = append(g.Meta.WatchFiles, repo.WatchFiles...)
 			}
-		}else {
+		} else {
 			r[localName] = &GitMetaContainer{
-				Meta:repo,
+				Meta:  repo,
 				Ready: false,
 			}
 		}
-	}else {
+	} else {
 		repoContainer[group] = make(map[string]*GitMetaContainer, 0)
 		repoContainer[group][localName] = &GitMetaContainer{
-			Meta: repo,
+			Meta:  repo,
 			Ready: false,
 		}
 	}
 }
 
 func PluginDetails(c *gin.Context) {
-	data := make(map[string]map[string]string, len(pluginsContainer))
+	data := make([]map[string]string, 0)
 	defer pluginMutex.RUnlock()
 	pluginMutex.RLock()
-	for name, p := range pluginsContainer {
-		data[name] = map[string]string {
-			"name": p.Plugin.GetMeta().Name,
-			"ready": strconv.FormatBool(p.Ready),
-			"description": p.Plugin.GetMeta().Group,
+	for _, p := range pluginsContainer {
+		data = append(data, map[string]string{
+			"name":        strings.ToLower(p.Plugin.GetMeta().Name),
+			"ready":       strings.ToLower(strconv.FormatBool(p.Ready)),
+			"description": strings.ToLower(p.Plugin.GetMeta().Group),
 			//TODO:add more metadata to plugins
-		}
+		})
 	}
-	c.JSON(200, repoContainer)
+	c.JSON(200, data)
 }
 
 func (s SyncManager) Initialize() error {
@@ -215,7 +194,7 @@ func (s SyncManager) Initialize() error {
 	//initialize repo container
 	for group, metas := range repoContainer {
 		groupPath := path.Join(s.baseFolder, group)
-		err := fsutil.MkParentDir(groupPath)
+		err := fsutil.Mkdir(groupPath, os.FileMode(0755))
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("failed to create folder for group: %s", group))
 			continue
@@ -226,7 +205,7 @@ func (s SyncManager) Initialize() error {
 				s.logger.Error(fmt.Sprintf("failed to find local name for repo: %s", meta.Meta.Repo))
 				continue
 			}
-			r, err  := runner.NewGitSyncRunner(groupPath, meta.Meta, s.eventCh, s.SyncInterval)
+			r, err := NewGitSyncRunner(group, groupPath, meta.Meta, s.eventCh, s.SyncInterval, s.logger)
 			if err != nil {
 				s.logger.Error(fmt.Sprintf("failed to create runner for repo: %s", meta.Meta.Repo))
 				continue
@@ -238,22 +217,21 @@ func (s SyncManager) Initialize() error {
 	if len(s.Runners) == 0 {
 		return errors.New("no plugin configured")
 	}
+	s.logger.Info("sync manager successfully started")
 	return nil
 }
 
-
-func (s *SyncManager) StartLoop() error {
+func (s *SyncManager) StartLoop() {
 	//start sync worker
 	for _, r := range s.Runners {
 		go r.StartLoop()
 	}
 	if len(s.Runners) == 0 {
-		return errors.New("no runner successfully started")
+		s.logger.Error(fmt.Sprintf("no sync runner available"))
+		return
 	}
-
 	// start loop to receive channel event
 	go s.handleEvents()
-	return nil
 }
 
 func (s *SyncManager) handleEvents() {
@@ -263,21 +241,21 @@ func (s *SyncManager) handleEvents() {
 	ticker := time.NewTicker(time.Duration(s.notifyInterval) * time.Second)
 	for {
 		select {
-			case event, ok := <- s.eventCh:
-			if ! ok {
+		case event, ok := <-s.eventCh:
+			if !ok {
 				return
 			}
-				if g, ok := repoContainer[event.GroupName]; ok {
-					if r, ok := g[GetRepoLocalName(event.RepoName)]; ok {
-						r.Ready = true
-						s.initializePluginWhenReady(event)
-						s.dispatchEvents(event)
-					}
+			if g, ok := repoContainer[event.GroupName]; ok {
+				if r, ok := g[GetRepoLocalName(event.RepoName)]; ok {
+					r.Ready = true
+					s.initializePluginWhenReady(event)
+					s.dispatchEvents(event)
 				}
-				s.logger.Info(fmt.Sprintf("event %v discarded due to unable to located repo from container",
-					event))
-			case <- ticker.C:
-				s.dispatchFlushEvents(0)
+			}
+			s.logger.Info(fmt.Sprintf("event %v discarded due to unable to located repo from container",
+				event))
+		case <-ticker.C:
+			s.dispatchFlushEvents(0)
 		}
 	}
 }

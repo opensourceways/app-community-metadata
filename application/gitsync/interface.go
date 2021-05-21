@@ -5,8 +5,8 @@ import "github.com/gin-gonic/gin"
 type RepoSchema string
 
 const (
-	Http RepoSchema = "https"
-	Ssh  RepoSchema = "ssh"
+	Https RepoSchema = "https"
+	Ssh   RepoSchema = "ssh"
 )
 
 const (
@@ -18,7 +18,6 @@ type GitEvent struct {
 	RepoName  string
 	Files     []string
 }
-
 
 type GitMeta struct {
 	//Git repo to watch
@@ -34,8 +33,8 @@ type GitMeta struct {
 }
 
 type GitMetaContainer struct {
-	Meta *GitMeta
-	Ready	bool
+	Meta  *GitMeta
+	Ready bool
 }
 
 type PluginMeta struct {
@@ -60,9 +59,7 @@ type EventFilter interface {
 }
 
 type Runner interface {
-
 	GetRepo() *GitMeta
 	StartLoop()
 	Close() error
 }
-

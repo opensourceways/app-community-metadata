@@ -5,11 +5,16 @@ import (
 	"github.com/opensourceways/app-community-metadata/app"
 	"github.com/opensourceways/app-community-metadata/application"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
+	_ "github.com/opensourceways/app-community-metadata/application/gitsync/plugins"
 	"github.com/opensourceways/app-community-metadata/cache"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+)
+
+var (
+	Manager *gitsync.SyncManager
 )
 
 func init() {
@@ -20,14 +25,17 @@ func init() {
 func main() {
 	listenSignals()
 	//init manager
-	manager, err := gitsync.NewSyncManager(application.Server().Group("/v1/metadata"))
+	Manager, err := gitsync.NewSyncManager(application.Server().Group("/v1/metadata"))
 	if err != nil {
+		color.Error.Printf("failed to initialize sync manager %v\n", err)
 		os.Exit(1)
 	}
-	err = manager.StartLoop()
+	err = Manager.Initialize()
 	if err != nil {
+		color.Error.Printf("failed to start manager %v\n ", err)
 		os.Exit(1)
 	}
+	Manager.StartLoop()
 	// init services
 	color.Info.Printf("============  Begin Running(PID: %d) ============\n", os.Getpid())
 	application.Run()
@@ -58,9 +66,12 @@ func handleSignals(c chan os.Signal) {
 	// sync logs
 	_ = app.Logger.Sync()
 	_ = cache.Close()
+	if Manager != nil {
+		Manager.Close()
+	}
 	//sleep and exit
 	time.Sleep(1e9 / 2)
-	color.Info.Println("\n  GoodBye...")
+	color.Info.Println("\nGoodBye...")
 
 	os.Exit(0)
 }
