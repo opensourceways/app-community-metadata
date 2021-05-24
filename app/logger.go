@@ -42,15 +42,23 @@ func newGenericLogger() {
 	// create config
 	if Debug {
 		// cfg = zap.NewDevelopmentConfig()
-		cfg = zap.NewProductionConfig()
+		cfg = zap.NewDevelopmentConfig()
 		cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 		cfg.Development = true
 		cfg.OutputPaths = []string{"stdout"}
 		cfg.ErrorOutputPaths = []string{"stderr"}
+		encoderCfg := zap.NewProductionEncoderConfig()
+		encoderCfg.TimeKey = "timestamp"
+		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		cfg.EncoderConfig = encoderCfg
 	} else {
 		cfg = zap.NewProductionConfig()
 		cfg.OutputPaths = []string{logFile}
 		cfg.ErrorOutputPaths = []string{errFile}
+		encoderCfg := zap.NewProductionEncoderConfig()
+		encoderCfg.TimeKey = "timestamp"
+		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		cfg.EncoderConfig = encoderCfg
 	}
 
 	// init some defined fields to log

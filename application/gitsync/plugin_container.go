@@ -57,6 +57,7 @@ func (p *PluginContainer) StartLoop() {
 				p.logger.Info(fmt.Sprintf(
 					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
 			}
+			p.logger.Info(fmt.Sprintf("event %v received in plugin container %s", event, p.Plugin.GetMeta().Name))
 			if event.GroupName == p.Plugin.GetMeta().Group {
 				r := GetRepo(p.Plugin.GetMeta().Repos, event.RepoName)
 				if r != nil {

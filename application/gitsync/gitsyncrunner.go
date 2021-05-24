@@ -18,6 +18,7 @@ import (
 
 const SyncTimeout = 60
 const SyncRetry = 3
+const DefaultSHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
 type GitSyncRunner struct {
 	ParentFolder string
@@ -47,7 +48,7 @@ func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel ch
 		//local repo path: /developing
 		//full file path: /developing/group1/repo/repo/README.md
 		path := filepath.Join(parentFolder, GetRepoLocalName(repo.Repo), r)
-		watchFiles[path] = path
+		watchFiles[path] = DefaultSHA256
 	}
 	return &GitSyncRunner{
 		ParentFolder: parentFolder,
@@ -128,7 +129,7 @@ func (g *GitSyncRunner) CompareDigestAndNotify() {
 	var changedFiles []string
 	for _, f := range g.watchFiles {
 		if fsutil.FileExist(f) {
-			newDigest, err := g.CalculateFileDigest(f)
+			newDigest, err := g.CalculateDigestForSingleFile(f)
 			if err != nil {
 				g.logger.Error(fmt.Sprintf("failed to calculate file digest, error %v. skipping watch", err))
 				continue
@@ -147,15 +148,18 @@ func (g *GitSyncRunner) CompareDigestAndNotify() {
 			}
 		}
 	}
-	event := GitEvent{
-		RepoName:  g.Meta.Repo,
-		GroupName: g.group,
-		Files:     changedFiles,
+	if len(changedFiles) != 0 {
+		event := GitEvent{
+			RepoName:  g.Meta.Repo,
+			GroupName: g.group,
+			Files:     changedFiles,
+		}
+		g.logger.Info(fmt.Sprintf("new changes detected for repo %s, files %v", g.Meta.Repo, changedFiles))
+		g.EventChannel <- &event
 	}
-	g.EventChannel <- &event
 }
-
-func (g GitSyncRunner) CalculateFileDigest(filepath string) (string, error) {
+//TODO: support calculate folder digest: https://blog.golang.org/pipelines/parallel.go
+func (g GitSyncRunner) CalculateDigestForSingleFile(filepath string) (string, error) {
 	f, err := os.Open(filepath)
 	if err != nil {
 		return "", err

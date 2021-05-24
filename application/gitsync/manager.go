@@ -24,7 +24,7 @@ var (
 	pluginsContainer = map[string]*PluginContainer{}
 	//repo organized as below:
 	//group1:
-	//		repo1
+	//		repo1(localpath)
 	//		repo2
 	repoContainer = map[string]map[string]*GitMetaContainer{}
 	repoMutex     sync.RWMutex
@@ -90,12 +90,12 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 			if event.GroupName == container.Plugin.GetMeta().Group {
 				//whether all repos are ready
 				readyRepos := 0
-				groups, ok := repoContainer[event.GroupName]
+				repos, ok := repoContainer[event.GroupName]
 				if !ok {
 					continue
 				}
 				for _, r := range container.Plugin.GetMeta().Repos {
-					if m, ok := groups[r.Repo]; ok {
+					if m, ok := repos[GetRepoLocalName(r.Repo)]; ok {
 						if m.Ready {
 							readyRepos += 1
 						}
@@ -111,6 +111,7 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 					}
 					go container.StartLoop()
 					container.Ready = true
+					s.logger.Info(fmt.Sprintf("plugin %s initialized.", container.Plugin.GetMeta().Name))
 				}
 			}
 		}
@@ -137,10 +138,7 @@ func Register(pluginName string, plugin Plugin) {
 	pluginMutex.Lock()
 	defer pluginMutex.Unlock()
 	//update plugin
-	pluginsContainer[pluginName] = &PluginContainer{
-		Plugin: plugin,
-		Ready:  false,
-	}
+	pluginsContainer[pluginName] = NewPluginContainer(plugin, app.Logger)
 	//update repo
 	for _, repo := range plugin.GetMeta().Repos {
 		localName := GetRepoLocalName(repo.Repo)
@@ -260,15 +258,22 @@ func (s *SyncManager) handleEvents() {
 			if !ok {
 				return
 			}
+			eventHandled := false
 			if g, ok := repoContainer[event.GroupName]; ok {
 				if r, ok := g[GetRepoLocalName(event.RepoName)]; ok {
-					r.Ready = true
+					if !r.Ready {
+						s.logger.Info(fmt.Sprintf("repo %s initialized.", r.Meta.Repo))
+						r.Ready = true
+					}
 					s.initializePluginWhenReady(event)
 					s.dispatchEvents(event)
+					eventHandled = true
 				}
 			}
-			s.logger.Info(fmt.Sprintf("event %v discarded due to unable to located repo from container",
-				event))
+			if !eventHandled {
+				s.logger.Info(fmt.Sprintf("event %v discarded due to unable to located repo from container",
+					event))
+			}
 		case <-ticker.C:
 			s.dispatchFlushEvents(0)
 		}
