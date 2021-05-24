@@ -21,7 +21,7 @@ func (h *HelloWorldPlugin) GetMeta() *gitsync.PluginMeta {
 			{
 				Repo:       "https://github.com/TommyLike/SampleApp",
 				Branch:     "master",
-				SubModules: true,
+				SubModules: "recursive",
 				Schema:     gitsync.Https,
 				WatchFiles: []string{
 					"README.md",

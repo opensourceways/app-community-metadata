@@ -1,95 +1,211 @@
 package gitsync
 
 import (
+	"bytes"
+	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
-	"github.com/fsnotify/fsnotify"
 	"github.com/gookit/goutil/fsutil"
 	"go.uber.org/zap"
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
+	"time"
 )
+
+const SyncTimeout = 60
+const SyncRetry = 3
 
 type GitSyncRunner struct {
 	ParentFolder string
 	Meta         *GitMeta
 	EventChannel chan<- *GitEvent
+	CloseChannel chan bool
 	SyncInterval int
-	watcher      *fsnotify.Watcher
 	logger       *zap.Logger
 	watchFiles   map[string]string
 	group        string
+	gitSyncPath  string
 }
 
-func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel chan<- *GitEvent, interval int, logger *zap.Logger) (*GitSyncRunner, error) {
+func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel chan<- *GitEvent, interval int, logger *zap.Logger, gitSyncPath string) (*GitSyncRunner, error) {
 	if !fsutil.DirExist(parentFolder) {
-		return nil, errors.New("parent folder doesn't exist")
-	}
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("parent folder %s doesn't exist", parentFolder))
 	}
 	//convert relative path into abs
 	watchFiles := make(map[string]string)
 	for _, r := range repo.WatchFiles {
-		path, _ := filepath.Abs(r)
-		watchFiles[path] = r
+		//NOTE:
+		//git sync will create a nested folder inside and perform file link switch when updated, therefore, the full
+		//file path would be like:
+		//repo: https://github.com/repo.git
+		//watch file: README.md
+		//group name: group1
+		//local repo path: /developing
+		//full file path: /developing/group1/repo/repo/README.md
+		path := filepath.Join(parentFolder, GetRepoLocalName(repo.Repo), r)
+		watchFiles[path] = path
 	}
 	return &GitSyncRunner{
 		ParentFolder: parentFolder,
 		Meta:         repo,
 		EventChannel: eventChannel,
 		SyncInterval: interval,
-		watcher:      watcher,
 		logger:       logger,
 		watchFiles:   watchFiles,
-		group: 		  group,
+		group:        group,
+		gitSyncPath:  gitSyncPath,
+		CloseChannel: make(chan bool, 1),
 	}, nil
 }
 
+func (g *GitSyncRunner) runCommand(ctx context.Context, cwd, command string, args ...string) (string, error) {
+	return g.runCommandWithStdin(ctx, cwd, "", command, args...)
+}
+
+func cmdForLog(command string, args ...string) string {
+	if strings.ContainsAny(command, " \t\n") {
+		command = fmt.Sprintf("%q", command)
+	}
+	argsCopy := make([]string, len(args))
+	copy(argsCopy, args)
+	for i := range args {
+		if strings.ContainsAny(args[i], " \t\n") {
+			argsCopy[i] = fmt.Sprintf("%q", args[i])
+		}
+	}
+	return command + " " + strings.Join(argsCopy, " ")
+}
+
+func (g *GitSyncRunner) runCommandWithStdin(ctx context.Context, cwd, stdin, command string, args ...string) (string, error) {
+	cmdStr := cmdForLog(command, args...)
+	g.logger.Info(fmt.Sprintf("running command cwd %s cmd %s", cwd, cmdStr))
+
+	cmd := exec.CommandContext(ctx, command, args...)
+	if cwd != "" {
+		cmd.Dir = cwd
+	}
+	outbuf := bytes.NewBuffer(nil)
+	errbuf := bytes.NewBuffer(nil)
+	cmd.Stdout = outbuf
+	cmd.Stderr = errbuf
+	cmd.Stdin = bytes.NewBufferString(stdin)
+
+	err := cmd.Run()
+	stdout := outbuf.String()
+	stderr := errbuf.String()
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("run(%s): %w: { stdout: %q, stderr: %q }", cmdStr, ctx.Err(), stdout, stderr)
+	}
+	if err != nil {
+		return "", fmt.Errorf("run(%s): %w: { stdout: %q, stderr: %q }", cmdStr, err, stdout, stderr)
+	}
+	g.logger.Info(fmt.Sprintf("command result stdout %q, stderr %q", stdout, stderr))
+
+	return stdout, nil
+}
+
+func (g *GitSyncRunner) SyncRepo() bool {
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*time.Duration(SyncTimeout))
+	args := []string{"--repo", g.Meta.Repo, "--root", g.ParentFolder, "--branch", g.Meta.Branch, "--one-time"}
+	if len(g.Meta.SubModules) != 0 {
+		args = append(args, []string{"--submodules", g.Meta.SubModules}...)
+	}
+	result, err := g.runCommand(ctx, "", g.gitSyncPath, args...)
+	if err != nil {
+		g.logger.Error(fmt.Sprintf("failed to perform git sync operation %s %v", g.Meta.Repo, err))
+		return false
+	}
+	g.logger.Info(result)
+	return true
+
+}
+
+func (g *GitSyncRunner) CompareDigestAndNotify() {
+	var changedFiles []string
+	for _, f := range g.watchFiles {
+		if fsutil.FileExist(f) {
+			newDigest, err := g.CalculateFileDigest(f)
+			if err != nil {
+				g.logger.Error(fmt.Sprintf("failed to calculate file digest, error %v. skipping watch", err))
+				continue
+			}
+			if newDigest != g.watchFiles[f] {
+				g.watchFiles[f] = newDigest
+				//convert abs path to relative path
+				rootFolder := filepath.Join(g.ParentFolder, GetRepoLocalName(g.Meta.Repo))
+				rel, err := filepath.Rel(rootFolder, f)
+				if err != nil {
+					g.logger.Error(fmt.Sprintf("failed to calculate relative path of file %s base folder %s," +
+						"error %v, skip watching", f, rootFolder, err))
+					continue
+				}
+				changedFiles = append(changedFiles, rel)
+			}
+		}
+	}
+	event := GitEvent{
+		RepoName:  g.Meta.Repo,
+		GroupName: g.group,
+		Files:     changedFiles,
+	}
+	g.EventChannel <- &event
+}
+
+func (g GitSyncRunner) CalculateFileDigest(filepath string) (string, error) {
+	f, err := os.Open(filepath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return string(h.Sum(nil)), nil
+}
+
 func (g *GitSyncRunner) StartLoop() {
-	//clone and watch repo
-	//watch file changes
-	//1. watch parent folder instead of file itself
-	//2. send out event only after the file is confirmed existed
+	success := g.SyncRepo()
+	if !success {
+		return
+	}
+	g.logger.Info("repo successfully cloned")
+	g.CompareDigestAndNotify()
 	g.Watching()
 }
 
 func (g *GitSyncRunner) Watching() {
+	ticker := time.NewTicker(time.Duration(g.SyncInterval) * time.Second)
+	retryCount := 0
 	for {
 		select {
-		case event, ok := <-g.watcher.Events:
-			if !ok {
+		case <-ticker.C:
+			success := g.SyncRepo()
+			if !success {
+				retryCount += 1
+				g.logger.Error(fmt.Sprintf("failed to perform repo sync operation, current retry [%d]", retryCount))
+			}
+			if retryCount >= SyncRetry {
 				return
 			}
-			g.logger.Info(fmt.Sprintf("%s received event %s", g.Meta.Repo, event))
-			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-				for k, path := range g.watchFiles {
-					if path == event.Name {
-						//ensure file exists
-						if fsutil.FileExist(event.Name) {
-							event := &GitEvent{
-								GroupName: g.group,
-								RepoName:  g.Meta.Repo,
-								Files: []string{
-									k,
-								},
-							}
-							g.EventChannel <- event
-						}
-					}
-				}
+			if success {
+				g.CompareDigestAndNotify()
 			}
-		case err, ok := <-g.watcher.Errors:
+		case _, ok := <-g.CloseChannel:
 			if !ok {
+				g.logger.Info("git sync runner received close event, quiting..")
 				return
 			}
-			g.logger.Info(fmt.Sprintf("%s received error %v", g.Meta.Repo, err))
 		}
 	}
 }
 
 func (g *GitSyncRunner) Close() error {
-	g.watcher.Close()
+	close(g.CloseChannel)
 	return nil
 }
 

@@ -10,7 +10,9 @@ import (
 	"go.uber.org/zap"
 	"math"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,10 +38,11 @@ type SyncManager struct {
 	Runners        map[string]Runner
 	logger         *zap.Logger
 	events         map[string]*GitEvent
-	group          *gin.RouterGroup
+	routerGroup    *gin.RouterGroup
+	gitSyncPath    string
 }
 
-func NewSyncManager(group *gin.RouterGroup) (*SyncManager, error) {
+func NewSyncManager(routerGroup *gin.RouterGroup) (*SyncManager, error) {
 	conf := app.Config.StringMap("manager")
 	syncValue, _ := strconv.Atoi(conf["syncInterval"])
 	syncInterval := math.Min(float64(syncValue), app.DefaultInterval)
@@ -47,6 +50,16 @@ func NewSyncManager(group *gin.RouterGroup) (*SyncManager, error) {
 	if !fsutil.DirExist(baseFolder) {
 		color.Error.Printf("rsync folder %s not existed", baseFolder)
 		return nil, errors.New("rsync folder not existed")
+	}
+	baseFolder, _ = filepath.Abs(baseFolder)
+	gitSyncPath, _ := conf["gitSyncPath"]
+	if !fsutil.FileExist(gitSyncPath) {
+		lookPath, err := exec.LookPath("git-sync")
+		if err != nil {
+			color.Error.Printf("git sync binary %s not found", lookPath)
+			return nil, errors.New("git sync binary not found")
+		}
+		gitSyncPath = lookPath
 	}
 	notifyValue, _ := strconv.Atoi(conf["notifyInterval"])
 	notifyInterval := math.Min(float64(notifyValue), app.DefaultInterval)
@@ -62,7 +75,8 @@ func NewSyncManager(group *gin.RouterGroup) (*SyncManager, error) {
 		logger:         app.Logger,
 		Runners:        make(map[string]Runner),
 		events:         make(map[string]*GitEvent),
-		group:          group,
+		routerGroup:    routerGroup,
+		gitSyncPath:    gitSyncPath,
 	}, nil
 }
 
@@ -72,7 +86,7 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 	//check whether plugin container is ready to register endpoint and handle message
 	for _, container := range pluginsContainer {
 		if !container.Ready {
-			//filter out mismatch group plugins
+			//filter out mismatch router plugins
 			if event.GroupName == container.Plugin.GetMeta().Group {
 				//whether all repos are ready
 				readyRepos := 0
@@ -89,7 +103,7 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 				}
 				if readyRepos == len(container.Plugin.GetMeta().Repos) {
 					//register and load files
-					container.Plugin.RegisterEndpoints(s.group.Group(container.Plugin.GetMeta().Group))
+					container.Plugin.RegisterEndpoints(s.routerGroup.Group(container.Plugin.GetMeta().Group))
 					err := container.Plugin.Load(map[string][]string{})
 					if err != nil {
 						s.logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
@@ -189,25 +203,26 @@ func PluginDetails(c *gin.Context) {
 
 func (s SyncManager) Initialize() error {
 	//register plugins meta endpoint
-	s.group.GET("/plugins", PluginDetails)
+	s.routerGroup.GET("/plugins", PluginDetails)
 	//TODO: register repo endpoint
 	//initialize repo container
 	for group, metas := range repoContainer {
 		groupPath := path.Join(s.baseFolder, group)
-		err := fsutil.Mkdir(groupPath, os.FileMode(0755))
-		if err != nil {
-			s.logger.Error(fmt.Sprintf("failed to create folder for group: %s", group))
-			continue
-		}
 		for _, meta := range metas {
 			localName := GetRepoLocalName(meta.Meta.Repo)
 			if localName == "" {
 				s.logger.Error(fmt.Sprintf("failed to find local name for repo: %s", meta.Meta.Repo))
 				continue
 			}
-			r, err := NewGitSyncRunner(group, groupPath, meta.Meta, s.eventCh, s.SyncInterval, s.logger)
+			localPath := filepath.Join(groupPath, localName)
+			err := fsutil.Mkdir(localPath, os.FileMode(0755))
 			if err != nil {
-				s.logger.Error(fmt.Sprintf("failed to create runner for repo: %s", meta.Meta.Repo))
+				s.logger.Error(fmt.Sprintf("failed to create folder for repo: %s", meta.Meta))
+				continue
+			}
+			r, err := NewGitSyncRunner(group, localPath, meta.Meta, s.eventCh, s.SyncInterval, s.logger, s.gitSyncPath)
+			if err != nil {
+				s.logger.Error(fmt.Sprintf("failed to create runner for repo: %s, err: %v", meta.Meta.Repo, err))
 				continue
 			}
 

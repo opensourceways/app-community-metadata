@@ -7,3 +7,4 @@ errFile = "./logs/error-{date}.log"
 syncInterval = 30
 notifyInterval = 30
 baseFolder = "./repos"
+gitSyncPath = "/usr/loca/bin/git-sync"

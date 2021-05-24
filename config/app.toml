@@ -18,3 +18,4 @@ prefix = "cache"
 syncInterval = 30
 notifyInterval = 30
 baseFolder = "/data/repos/"
+gitSyncPath = "/usr/loca/bin/git-sync"

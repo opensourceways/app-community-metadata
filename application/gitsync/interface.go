@@ -25,7 +25,7 @@ type GitMeta struct {
 	//Git branch
 	Branch string
 	//Whether to checkout submodules
-	SubModules bool
+	SubModules string
 	//Git repo schema, https or ssh
 	Schema RepoSchema
 	//Files to watch, relatively
@@ -42,7 +42,7 @@ type PluginMeta struct {
 	Name string
 	//Description for this plugin
 	Description string
-	//API groups, the exposed api endpoint would be: /version/data/group-name/register-endpoint
+	//API groups, the exposed api endpoint would be: /version/data/routerGroup-name/register-endpoint
 	Group string
 	//Git repositories to watch
 	Repos []GitMeta
