@@ -11,12 +11,12 @@ type PluginContainer struct {
 	Ready          bool
 	Channel        chan *GitEvent
 	FlushChannel   chan int
-	logger         *zap.Logger
+	Logger         *zap.Logger
 	eventContainer map[string][]string
 	eventMutex     sync.Mutex
 }
 
-func NewPluginContainer(p Plugin, l *zap.Logger) *PluginContainer {
+func NewPluginContainer(p Plugin) *PluginContainer {
 	container := make(map[string][]string)
 	for _, repo := range p.GetMeta().Repos {
 		container[repo.Repo] = make([]string, 0)
@@ -26,7 +26,6 @@ func NewPluginContainer(p Plugin, l *zap.Logger) *PluginContainer {
 		Ready:          false,
 		Channel:        make(chan *GitEvent, 50),
 		FlushChannel:   make(chan int, 10),
-		logger:         l,
 		eventContainer: container,
 	}
 }
@@ -43,7 +42,7 @@ func (p *PluginContainer) FlushEvents() map[string][]string {
 	results := make(map[string][]string)
 	err := DeepCopyMap(p.eventContainer, results)
 	if err != nil {
-		p.logger.Error(fmt.Sprintf("failed to copy events to plugins %v", err))
+		p.Logger.Error(fmt.Sprintf("failed to copy events to plugins %v", err))
 	}
 	p.eventContainer = make(map[string][]string)
 	return results
@@ -54,10 +53,11 @@ func (p *PluginContainer) StartLoop() {
 		select {
 		case event, ok := <-p.Channel:
 			if !ok {
-				p.logger.Info(fmt.Sprintf(
+				p.Logger.Info(fmt.Sprintf(
 					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
 			}
-			p.logger.Info(fmt.Sprintf("event %v received in plugin container %s", event, p.Plugin.GetMeta().Name))
+
+			p.Logger.Info(fmt.Sprintf("event %v received in plugin container %s", event, p.Plugin.GetMeta().Name))
 			if event.GroupName == p.Plugin.GetMeta().Group {
 				r := GetRepo(p.Plugin.GetMeta().Repos, event.RepoName)
 				if r != nil {
@@ -69,7 +69,7 @@ func (p *PluginContainer) StartLoop() {
 						}
 					}
 					if eventCount != 0 {
-						p.logger.Info(fmt.Sprintf(
+						p.Logger.Info(fmt.Sprintf(
 							"plugin container[%s] received git event with %d file changes",
 							p.Plugin.GetMeta().Name, eventCount))
 					}
@@ -77,17 +77,17 @@ func (p *PluginContainer) StartLoop() {
 			}
 		case _, ok := <-p.FlushChannel:
 			if !ok {
-				p.logger.Info(fmt.Sprintf(
+				p.Logger.Info(fmt.Sprintf(
 					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
 			}
 			files := p.FlushEvents()
 			if len(files) != 0 {
 				err := p.Plugin.Load(files)
 				if err != nil {
-					p.logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
+					p.Logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
 						p.Plugin.GetMeta().Name, err))
 				} else {
-					p.logger.Info(fmt.Sprintf("plugin container[%s] triggered LOAD function",
+					p.Logger.Info(fmt.Sprintf("plugin container[%s] triggered LOAD function",
 						p.Plugin.GetMeta().Name))
 				}
 			}

@@ -127,21 +127,21 @@ func (g *GitSyncRunner) SyncRepo() bool {
 
 func (g *GitSyncRunner) CompareDigestAndNotify() {
 	var changedFiles []string
-	for _, f := range g.watchFiles {
-		if fsutil.FileExist(f) {
-			newDigest, err := g.CalculateDigestForSingleFile(f)
+	for k, _ := range g.watchFiles {
+		if fsutil.FileExist(k) {
+			newDigest, err := g.CalculateDigestForSingleFile(k)
 			if err != nil {
 				g.logger.Error(fmt.Sprintf("failed to calculate file digest, error %v. skipping watch", err))
 				continue
 			}
-			if newDigest != g.watchFiles[f] {
-				g.watchFiles[f] = newDigest
+			if newDigest != g.watchFiles[k] {
+				g.watchFiles[k] = newDigest
 				//convert abs path to relative path
 				rootFolder := filepath.Join(g.ParentFolder, GetRepoLocalName(g.Meta.Repo))
-				rel, err := filepath.Rel(rootFolder, f)
+				rel, err := filepath.Rel(rootFolder, k)
 				if err != nil {
-					g.logger.Error(fmt.Sprintf("failed to calculate relative path of file %s base folder %s," +
-						"error %v, skip watching", f, rootFolder, err))
+					g.logger.Error(fmt.Sprintf("failed to calculate relative path of file %s base folder %s,"+
+						"error %v, skip watching", k, rootFolder, err))
 					continue
 				}
 				changedFiles = append(changedFiles, rel)

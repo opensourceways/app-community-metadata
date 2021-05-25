@@ -67,6 +67,11 @@ func NewSyncManager(routerGroup *gin.RouterGroup) (*SyncManager, error) {
 		"============ SyncManager(sync: %d notify: %d baseFolder: %s) ============\n",
 		int(syncInterval), int(notifyInterval), baseFolder)
 
+	//update plugin container's logger
+	for _, v := range pluginsContainer {
+		v.Logger = app.Logger
+	}
+
 	return &SyncManager{
 		SyncInterval:   int(syncInterval),
 		notifyInterval: int(notifyInterval),
@@ -138,7 +143,7 @@ func Register(pluginName string, plugin Plugin) {
 	pluginMutex.Lock()
 	defer pluginMutex.Unlock()
 	//update plugin
-	pluginsContainer[pluginName] = NewPluginContainer(plugin, app.Logger)
+	pluginsContainer[pluginName] = NewPluginContainer(plugin)
 	//update repo
 	for _, repo := range plugin.GetMeta().Repos {
 		localName := GetRepoLocalName(repo.Repo)
