@@ -3,9 +3,15 @@ package plugins
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
+	"io/ioutil"
+	"os"
 )
 
+const RepoName = "https://github.com/TommyLike/SampleApp"
+const RepoFile = "README.md"
+
 type HelloWorldPlugin struct {
+	content string
 }
 
 func NewHelloWorldPlugin() gitsync.Plugin {
@@ -19,12 +25,12 @@ func (h *HelloWorldPlugin) GetMeta() *gitsync.PluginMeta {
 		Description: "used for demonstration",
 		Repos: []gitsync.GitMeta{
 			{
-				Repo:       "https://github.com/TommyLike/SampleApp",
+				Repo:       RepoName,
 				Branch:     "master",
 				SubModules: "recursive",
 				Schema:     gitsync.Https,
 				WatchFiles: []string{
-					"README.md",
+					RepoFile,
 				},
 			},
 		},
@@ -32,6 +38,20 @@ func (h *HelloWorldPlugin) GetMeta() *gitsync.PluginMeta {
 }
 
 func (h *HelloWorldPlugin) Load(files map[string][]string) error {
+	if files, ok := files[RepoName]; ok {
+		if len(files) > 0 {
+			f, err := os.Open(files[0])
+			defer f.Close()
+			if err != nil {
+				return err
+			}
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return err
+			}
+			h.content = string(bytes)
+		}
+	}
 	return nil
 }
 
@@ -40,5 +60,5 @@ func (h *HelloWorldPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 }
 
 func (h *HelloWorldPlugin)ReadmeContent(c *gin.Context) {
-	c.JSON(200, "string")
+	c.JSON(200, h.content)
 }

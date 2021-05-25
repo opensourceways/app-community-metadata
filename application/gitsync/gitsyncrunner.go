@@ -183,6 +183,7 @@ func (g *GitSyncRunner) Watching() {
 	for {
 		select {
 		case <-ticker.C:
+			g.logger.Info(fmt.Sprintf("========= starting to perform git sync operation for repo: %s =========", g.Meta.Repo))
 			success := g.SyncRepo()
 			if !success {
 				retryCount += 1
