@@ -36,5 +36,9 @@ func (h *HelloWorldPlugin) Load(files map[string][]string) error {
 }
 
 func (h *HelloWorldPlugin) RegisterEndpoints(group *gin.RouterGroup) {
-	return
+	group.GET("/readme", h.ReadmeContent)
+}
+
+func (h *HelloWorldPlugin)ReadmeContent(c *gin.Context) {
+	c.JSON(200, "string")
 }

@@ -63,7 +63,7 @@ func (p *PluginContainer) StartLoop() {
 				if r != nil {
 					eventCount := 0
 					for _, f := range event.Files {
-						if StringInclude(r.WatchFiles, f) {
+						if PathIncludes(r.WatchFiles, f) {
 							p.AddEvents(r.Repo, f)
 							eventCount += 1
 						}

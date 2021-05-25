@@ -108,7 +108,7 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 				}
 				if readyRepos == len(container.Plugin.GetMeta().Repos) {
 					//register and load files
-					container.Plugin.RegisterEndpoints(s.routerGroup.Group(container.Plugin.GetMeta().Group))
+					container.Plugin.RegisterEndpoints(s.routerGroup.Group(container.Plugin.GetMeta().Group).Group(container.Plugin.GetMeta().Name))
 					err := container.Plugin.Load(map[string][]string{})
 					if err != nil {
 						s.logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",

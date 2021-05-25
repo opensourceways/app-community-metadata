@@ -115,12 +115,11 @@ func (g *GitSyncRunner) SyncRepo() bool {
 	if len(g.Meta.SubModules) != 0 {
 		args = append(args, []string{"--submodules", g.Meta.SubModules}...)
 	}
-	result, err := g.runCommand(ctx, "", g.gitSyncPath, args...)
+	_, err := g.runCommand(ctx, "", g.gitSyncPath, args...)
 	if err != nil {
 		g.logger.Error(fmt.Sprintf("failed to perform git sync operation %s %v", g.Meta.Repo, err))
 		return false
 	}
-	g.logger.Info(result)
 	return true
 
 }
@@ -128,6 +127,10 @@ func (g *GitSyncRunner) SyncRepo() bool {
 func (g *GitSyncRunner) CompareDigestAndNotify() {
 	var changedFiles []string
 	for k, _ := range g.watchFiles {
+		if fsutil.IsDir(k) {
+			g.logger.Info("watch folder instead of file is not supported")
+			continue
+		}
 		if fsutil.FileExist(k) {
 			newDigest, err := g.CalculateDigestForSingleFile(k)
 			if err != nil {
@@ -136,15 +139,7 @@ func (g *GitSyncRunner) CompareDigestAndNotify() {
 			}
 			if newDigest != g.watchFiles[k] {
 				g.watchFiles[k] = newDigest
-				//convert abs path to relative path
-				rootFolder := filepath.Join(g.ParentFolder, GetRepoLocalName(g.Meta.Repo))
-				rel, err := filepath.Rel(rootFolder, k)
-				if err != nil {
-					g.logger.Error(fmt.Sprintf("failed to calculate relative path of file %s base folder %s,"+
-						"error %v, skip watching", k, rootFolder, err))
-					continue
-				}
-				changedFiles = append(changedFiles, rel)
+				changedFiles = append(changedFiles, k)
 			}
 		}
 	}

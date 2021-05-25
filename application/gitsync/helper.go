@@ -56,6 +56,15 @@ func StringInclude(s []string, name string) bool {
 	return false
 }
 
+func PathIncludes(s []string, absPath string) bool {
+	for _, a := range s {
+		if strings.HasSuffix(absPath, a) {
+			return true
+		}
+	}
+	return false
+}
+
 func DeepCopyMap(src map[string][]string, dst map[string][]string) error {
 	if src == nil {
 		return errors.New("src cannot be nil")
