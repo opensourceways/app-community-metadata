@@ -59,6 +59,6 @@ func (h *HelloWorldPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/readme", h.ReadmeContent)
 }
 
-func (h *HelloWorldPlugin)ReadmeContent(c *gin.Context) {
+func (h *HelloWorldPlugin) ReadmeContent(c *gin.Context) {
 	c.JSON(200, h.content)
 }

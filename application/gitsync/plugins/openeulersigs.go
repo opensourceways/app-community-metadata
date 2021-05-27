@@ -38,7 +38,7 @@ func (h *OpenEulerSigsPlugin) GetMeta() *gitsync.PluginMeta {
 }
 
 func (h *OpenEulerSigsPlugin) Load(files map[string][]string) error {
-	if files, ok := files[RepoName]; ok {
+	if files, ok := files[CommunityRepo]; ok {
 		if len(files) > 0 {
 			f, err := os.Open(files[0])
 			defer f.Close()
@@ -62,6 +62,6 @@ func (h *OpenEulerSigsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/sigs", h.ReadSigsYaml)
 }
 
-func (h *OpenEulerSigsPlugin)ReadSigsYaml(c *gin.Context) {
-	c.JSON(200, string(h.sigs))
+func (h *OpenEulerSigsPlugin) ReadSigsYaml(c *gin.Context) {
+	c.Data(200, "application/json", h.sigs)
 }

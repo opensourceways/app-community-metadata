@@ -21,18 +21,19 @@ const SyncRetry = 3
 const DefaultSHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
 type GitSyncRunner struct {
-	ParentFolder string
-	Meta         *GitMeta
-	EventChannel chan<- *GitEvent
-	CloseChannel chan bool
-	SyncInterval int
-	logger       *zap.Logger
-	watchFiles   map[string]string
-	group        string
-	gitSyncPath  string
+	ParentFolder    string
+	Meta            *GitMeta
+	EventChannel    chan<- *GitEvent
+	CloseChannel    chan bool
+	SyncInterval    int
+	logger          *zap.Logger
+	watchFiles      map[string]string
+	group           string
+	gitSyncPath     string
+	WebhookEndpoint string
 }
 
-func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel chan<- *GitEvent, interval int, logger *zap.Logger, gitSyncPath string) (*GitSyncRunner, error) {
+func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel chan<- *GitEvent, interval int, logger *zap.Logger, gitSyncPath string, webhookEndpoint string) (*GitSyncRunner, error) {
 	if !fsutil.DirExist(parentFolder) {
 		return nil, errors.New(fmt.Sprintf("parent folder %s doesn't exist", parentFolder))
 	}
@@ -51,16 +52,22 @@ func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel ch
 		watchFiles[path] = DefaultSHA256
 	}
 	return &GitSyncRunner{
-		ParentFolder: parentFolder,
-		Meta:         repo,
-		EventChannel: eventChannel,
-		SyncInterval: interval,
-		logger:       logger,
-		watchFiles:   watchFiles,
-		group:        group,
-		gitSyncPath:  gitSyncPath,
-		CloseChannel: make(chan bool, 1),
+		ParentFolder:    parentFolder,
+		Meta:            repo,
+		EventChannel:    eventChannel,
+		SyncInterval:    interval,
+		logger:          logger,
+		watchFiles:      watchFiles,
+		group:           group,
+		gitSyncPath:     gitSyncPath,
+		CloseChannel:    make(chan bool, 1),
+		WebhookEndpoint: webhookEndpoint,
 	}, nil
+}
+
+func (g *GitSyncRunner) RepoUpdated() {
+	g.logger.Info(fmt.Sprintf("repo %s commit id changed.", g.Meta.Repo))
+	g.CompareDigestAndNotify()
 }
 
 func (g *GitSyncRunner) runCommand(ctx context.Context, cwd, command string, args ...string) (string, error) {
@@ -115,6 +122,7 @@ func (g *GitSyncRunner) SyncRepo() bool {
 	if len(g.Meta.SubModules) != 0 {
 		args = append(args, []string{"--submodules", g.Meta.SubModules}...)
 	}
+	args = append(args, []string{"-webhook-url", g.WebhookEndpoint, "-webhook-method", "GET", "--webhook-timeout", "2s"}...)
 	_, err := g.runCommand(ctx, "", g.gitSyncPath, args...)
 	if err != nil {
 		g.logger.Error(fmt.Sprintf("failed to perform git sync operation %s %v", g.Meta.Repo, err))
@@ -153,6 +161,7 @@ func (g *GitSyncRunner) CompareDigestAndNotify() {
 		g.EventChannel <- &event
 	}
 }
+
 //TODO: support calculate folder digest: https://blog.golang.org/pipelines/parallel.go
 func (g GitSyncRunner) CalculateDigestForSingleFile(filepath string) (string, error) {
 	f, err := os.Open(filepath)
@@ -172,7 +181,7 @@ func (g *GitSyncRunner) StartLoop() {
 	if !success {
 		return
 	}
-	g.logger.Info("repo successfully cloned")
+	g.logger.Info(fmt.Sprintf("repo %s successfully cloned", g.Meta.Repo))
 	g.CompareDigestAndNotify()
 	g.Watching()
 }
@@ -191,9 +200,6 @@ func (g *GitSyncRunner) Watching() {
 			}
 			if retryCount >= SyncRetry {
 				return
-			}
-			if success {
-				g.CompareDigestAndNotify()
 			}
 		case _, ok := <-g.CloseChannel:
 			if !ok {

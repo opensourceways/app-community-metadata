@@ -62,4 +62,5 @@ type Runner interface {
 	GetRepo() *GitMeta
 	StartLoop()
 	Close() error
+	RepoUpdated()
 }

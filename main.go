@@ -25,17 +25,17 @@ func init() {
 func main() {
 	listenSignals()
 	//init manager
-	Manager, err := gitsync.NewSyncManager(application.Server().Group("/v1/metadata"))
+	manager, err := gitsync.NewSyncManager(application.Server().Group("/v1/metadata"))
 	if err != nil {
 		color.Error.Printf("failed to initialize sync manager %v\n", err)
 		os.Exit(1)
 	}
-	err = Manager.Initialize()
+	err = manager.Initialize()
 	if err != nil {
 		color.Error.Printf("failed to start manager %v\n ", err)
 		os.Exit(1)
 	}
-	Manager.StartLoop()
+	manager.StartLoop()
 	// init services
 	color.Info.Printf("============  Begin Running(PID: %d) ============\n", os.Getpid())
 	application.Run()

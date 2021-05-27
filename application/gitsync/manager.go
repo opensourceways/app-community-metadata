@@ -204,10 +204,25 @@ func PluginDetails(c *gin.Context) {
 	c.JSON(200, data)
 }
 
-func (s SyncManager) Initialize() error {
-	//register plugins meta endpoint
+func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
+	//only allowed from local
+	if c.ClientIP() != "127.0.0.1" {
+		c.JSON(403, nil)
+	}
+	group := c.Param("userid")
+	localName := c.Param("localname")
+	if r, ok := s.Runners[fmt.Sprintf("%s/%s", group, localName)]; ok {
+		r.RepoUpdated()
+		c.JSON(200, nil)
+	} else {
+		s.logger.Error(fmt.Sprintf("group: %s repo %s not found in repo runner", group, localName))
+		c.JSON(404, nil)
+	}
+}
+
+func (s *SyncManager) Initialize() error {
 	s.routerGroup.GET("/plugins", PluginDetails)
-	//TODO: register repo endpoint
+	s.routerGroup.GET("/plugins/:group/:localname/trigger", s.repoUpdateNotify)
 	//initialize repo container
 	for group, metas := range repoContainer {
 		groupPath := path.Join(s.baseFolder, group)
@@ -223,7 +238,8 @@ func (s SyncManager) Initialize() error {
 				s.logger.Error(fmt.Sprintf("failed to create folder for repo: %s", meta.Meta))
 				continue
 			}
-			r, err := NewGitSyncRunner(group, localPath, meta.Meta, s.eventCh, s.SyncInterval, s.logger, s.gitSyncPath)
+			endpoint := fmt.Sprintf("http://127.0.0.1:%d%s/%s/%s/trigger", app.HttpPort, s.routerGroup.BasePath(), group, localName)
+			r, err := NewGitSyncRunner(group, localPath, meta.Meta, s.eventCh, s.SyncInterval, s.logger, s.gitSyncPath, endpoint)
 			if err != nil {
 				s.logger.Error(fmt.Sprintf("failed to create runner for repo: %s, err: %v", meta.Meta.Repo, err))
 				continue
