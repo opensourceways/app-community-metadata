@@ -208,15 +208,18 @@ func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
 	//only allowed from local
 	if c.ClientIP() != "127.0.0.1" {
 		c.JSON(403, nil)
+		return
 	}
 	group := c.Param("group")
 	localName := c.Param("localname")
 	if r, ok := s.Runners[fmt.Sprintf("%s/%s", group, localName)]; ok {
 		r.RepoUpdated()
 		c.JSON(200, nil)
+		return
 	} else {
-		s.logger.Error(fmt.Sprintf("group: %s repo %s not found in repo runner", group, localName))
+		s.logger.Info(fmt.Sprintf("group: %s repo %s not found in repo runner", group, localName))
 		c.JSON(404, nil)
+		return
 	}
 }
 
