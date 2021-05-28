@@ -61,8 +61,7 @@ func newGenericLogger() {
 
 	// init some defined fields to log
 	cfg.InitialFields = map[string]interface{}{
-		"hostname": Hostname,
-		// "context": map[string]interface{}{},
+		//TODO: Add useful field here.
 	}
 
 	// create logger
