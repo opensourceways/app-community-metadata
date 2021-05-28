@@ -223,6 +223,11 @@ func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
 	}
 }
 
+func (s *SyncManager) getRepoTriggerEndpoint(group, localName string) string {
+	return fmt.Sprintf("http://127.0.0.1:%d%s/repos/%s/%s/trigger",
+		app.HttpPort, s.routerGroup.BasePath(), group, localName)
+}
+
 func (s *SyncManager) Initialize() error {
 	s.routerGroup.GET("/plugins", PluginDetails)
 	s.routerGroup.GET("/repos/:group/:localname/trigger", s.repoUpdateNotify)
@@ -241,8 +246,8 @@ func (s *SyncManager) Initialize() error {
 				s.logger.Error(fmt.Sprintf("failed to create folder for repo: %s", meta.Meta))
 				continue
 			}
-			endpoint := fmt.Sprintf("http://127.0.0.1:%d%s/repos/%s/%s/trigger", app.HttpPort, s.routerGroup.BasePath(), group, localName)
-			r, err := NewGitSyncRunner(group, localPath, meta.Meta, s.eventCh, s.SyncInterval, s.logger, s.gitSyncPath, endpoint)
+			r, err := NewGitSyncRunner(group, localPath, meta.Meta, s.eventCh, s.SyncInterval, s.logger, s.gitSyncPath,
+				s.getRepoTriggerEndpoint(group, localName))
 			if err != nil {
 				s.logger.Error(fmt.Sprintf("failed to create runner for repo: %s, err: %v", meta.Meta.Repo, err))
 				continue

@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-const CommunityRepo = "https://gitee.com/openeuler/community.git"
+const CommunityRepo = "https://gitee.com/openeuler/community"
 
 type OpenEulerSigsPlugin struct {
 	sigs []byte

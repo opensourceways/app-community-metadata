@@ -116,20 +116,24 @@ func (g *GitSyncRunner) runCommandWithStdin(ctx context.Context, cwd, stdin, com
 	return stdout, nil
 }
 
-func (g *GitSyncRunner) SyncRepo() bool {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*time.Duration(SyncTimeout))
+func (g *GitSyncRunner) SyncRepo(ctx context.Context, onetime bool) bool {
 	args := []string{"--repo", g.Meta.Repo, "--root", g.ParentFolder, "--branch", g.Meta.Branch, "--one-time"}
 	if len(g.Meta.SubModules) != 0 {
 		args = append(args, []string{"--submodules", g.Meta.SubModules}...)
 	}
+	//append webhook related parameters
 	args = append(args, []string{"-webhook-url", g.WebhookEndpoint, "-webhook-method", "GET", "--webhook-timeout", "2s"}...)
+	if onetime {
+		args = append(args, []string{"--wait", fmt.Sprintf("%ds", g.SyncInterval)}...)
+	} else {
+		args = append(args, []string{"--one-time"}...)
+	}
 	_, err := g.runCommand(ctx, "", g.gitSyncPath, args...)
 	if err != nil {
 		g.logger.Error(fmt.Sprintf("failed to perform git sync operation %s %v", g.Meta.Repo, err))
 		return false
 	}
 	return true
-
 }
 
 func (g *GitSyncRunner) CompareDigestAndNotify() {
@@ -177,32 +181,22 @@ func (g GitSyncRunner) CalculateDigestForSingleFile(filepath string) (string, er
 }
 
 func (g *GitSyncRunner) StartLoop() {
-	success := g.SyncRepo()
-	if !success {
-		return
+	//first clone or update
+	ctx, _ := context.WithTimeout(context.Background(), time.Second * SyncTimeout)
+	success := g.SyncRepo(ctx, true)
+	if success {
+		g.logger.Info(fmt.Sprintf("repo %s successfully cloned", g.Meta.Repo))
 	}
-	g.logger.Info(fmt.Sprintf("repo %s successfully cloned", g.Meta.Repo))
 	g.CompareDigestAndNotify()
-	g.Watching()
-}
-
-func (g *GitSyncRunner) Watching() {
-	ticker := time.NewTicker(time.Duration(g.SyncInterval) * time.Second)
-	retryCount := 0
+	//start watching with cancel context
+	ctx, cancel := context.WithCancel(context.Background())
+	go g.SyncRepo(ctx, false)
 	for {
 		select {
-		case <-ticker.C:
-			g.logger.Info(fmt.Sprintf("========= starting to perform git sync operation for repo: %s =========", g.Meta.Repo))
-			success := g.SyncRepo()
-			if !success {
-				retryCount += 1
-				g.logger.Error(fmt.Sprintf("failed to perform repo sync operation, current retry [%d]", retryCount))
-			}
-			if retryCount >= SyncRetry {
-				return
-			}
 		case _, ok := <-g.CloseChannel:
 			if !ok {
+				cancel()
+				time.Sleep(1 * time.Second)
 				g.logger.Info("git sync runner received close event, quiting..")
 				return
 			}
