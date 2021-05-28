@@ -1,5 +1,4 @@
 name = "community-metadata"
-debug = false
 timezone = "PRC"
 httpPort = 9500
 

@@ -36,7 +36,6 @@ func Bootstrap(configDir string) {
 func initAppInfo() {
 	//update App info
 	Name = config.String("name", DefaultAppName)
-	Debug = config.Bool("debug", false)
 	if httpPort := config.Int("httpPort", 0); httpPort != 0 {
 		HttpPort = httpPort
 	}
@@ -107,7 +106,9 @@ func initAppEnv() {
 
 	if EnvName == EnvDev || EnvName == EnvTest {
 		gin.SetMode(gin.DebugMode)
+		Debug = true
 	} else {
 		gin.SetMode(gin.ReleaseMode)
+		Debug = false
 	}
 }
