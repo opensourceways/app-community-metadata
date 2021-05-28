@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	Manager *gitsync.SyncManager
+	manager *gitsync.SyncManager
 )
 
 func init() {
@@ -25,7 +25,8 @@ func init() {
 func main() {
 	listenSignals()
 	//init manager
-	manager, err := gitsync.NewSyncManager(application.Server().Group("/v1/metadata"))
+	var err error
+	manager, err = gitsync.NewSyncManager(application.Server().Group("/v1/metadata"))
 	if err != nil {
 		color.Error.Printf("failed to initialize sync manager %v\n", err)
 		os.Exit(1)
@@ -66,8 +67,8 @@ func handleSignals(c chan os.Signal) {
 	// sync logs
 	_ = app.Logger.Sync()
 	_ = cache.Close()
-	if Manager != nil {
-		Manager.Close()
+	if manager != nil {
+		manager.Close()
 	}
 	//sleep and exit
 	time.Sleep(1e9 / 2)

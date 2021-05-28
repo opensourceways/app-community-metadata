@@ -55,6 +55,7 @@ func (p *PluginContainer) StartLoop() {
 			if !ok {
 				p.Logger.Info(fmt.Sprintf(
 					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
+				return
 			}
 
 			p.Logger.Info(fmt.Sprintf("event %v received in plugin container %s", event, p.Plugin.GetMeta().Name))
@@ -79,6 +80,7 @@ func (p *PluginContainer) StartLoop() {
 			if !ok {
 				p.Logger.Info(fmt.Sprintf(
 					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
+				return
 			}
 			files := p.FlushEvents()
 			if len(files) != 0 {

@@ -117,14 +117,14 @@ func (g *GitSyncRunner) runCommandWithStdin(ctx context.Context, cwd, stdin, com
 }
 
 func (g *GitSyncRunner) SyncRepo(ctx context.Context, onetime bool) bool {
-	args := []string{"--repo", g.Meta.Repo, "--root", g.ParentFolder, "--branch", g.Meta.Branch, "--one-time"}
+	args := []string{"--repo", g.Meta.Repo, "--root", g.ParentFolder, "--branch", g.Meta.Branch}
 	if len(g.Meta.SubModules) != 0 {
 		args = append(args, []string{"--submodules", g.Meta.SubModules}...)
 	}
-	//append webhook related parameters
-	args = append(args, []string{"-webhook-url", g.WebhookEndpoint, "-webhook-method", "GET", "--webhook-timeout", "2s"}...)
-	if onetime {
-		args = append(args, []string{"--wait", fmt.Sprintf("%ds", g.SyncInterval)}...)
+	if !onetime {
+		//append webhook related parameters
+		args = append(args, []string{"-webhook-url", g.WebhookEndpoint, "-webhook-method", "GET", "--webhook-timeout", "2s"}...)
+		args = append(args, []string{"--wait", fmt.Sprintf("%d", g.SyncInterval)}...)
 	} else {
 		args = append(args, []string{"--one-time"}...)
 	}
@@ -182,10 +182,10 @@ func (g GitSyncRunner) CalculateDigestForSingleFile(filepath string) (string, er
 
 func (g *GitSyncRunner) StartLoop() {
 	//first clone or update
-	ctx, _ := context.WithTimeout(context.Background(), time.Second * SyncTimeout)
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*SyncTimeout)
 	success := g.SyncRepo(ctx, true)
 	if success {
-		g.logger.Info(fmt.Sprintf("repo %s successfully cloned", g.Meta.Repo))
+		g.logger.Info(fmt.Sprintf("repo [%s] successfully cloned", g.Meta.Repo))
 	}
 	g.CompareDigestAndNotify()
 	//start watching with cancel context
@@ -196,8 +196,9 @@ func (g *GitSyncRunner) StartLoop() {
 		case _, ok := <-g.CloseChannel:
 			if !ok {
 				cancel()
-				time.Sleep(1 * time.Second)
-				g.logger.Info("git sync runner received close event, quiting..")
+				time.Sleep(2 * time.Second)
+				g.logger.Info(fmt.Sprintf("git sync runner for repo [%s] received close event, quiting..",
+					g.Meta.Repo))
 				return
 			}
 		}
