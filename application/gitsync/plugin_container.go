@@ -58,8 +58,8 @@ func (p *PluginContainer) StartLoop() {
 				return
 			}
 
-			p.Logger.Info(fmt.Sprintf("event %v received in plugin container %s", event, p.Plugin.GetMeta().Name))
 			if event.GroupName == p.Plugin.GetMeta().Group {
+				p.Logger.Info(fmt.Sprintf("event %v received in plugin container %s", event, p.Plugin.GetMeta().Name))
 				r := GetRepo(p.Plugin.GetMeta().Repos, event.RepoName)
 				if r != nil {
 					eventCount := 0
