@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/gookit/goutil/fsutil"
 	"go.uber.org/zap"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -179,14 +179,17 @@ func (g *GitSyncRunner) CompareDigestAndNotify() {
 	}
 }
 
-//TODO: support calculate folder digest: https://blog.golang.org/pipelines/parallel.go
 func (g *GitSyncRunner) CalculateDigestForSingleFile(filepath string) (string, error) {
-	bs, err := ioutil.ReadFile(filepath)
+	f, err := os.Open(filepath)
 	if err != nil {
 		return "", err
 	}
+	defer f.Close()
 	h := sha256.New()
-	return string(h.Sum(bs)), nil
+	if _, err = io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return string(h.Sum(nil)), nil
 }
 
 func (g *GitSyncRunner) processFileHash(filePath string, done chan struct{}) (<-chan HashResult, <-chan error) {
@@ -204,12 +207,18 @@ func (g *GitSyncRunner) processFileHash(filePath string, done chan struct{}) (<-
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				data, err := ioutil.ReadFile(path)
-				h := sha256.New()
-				h.Sum(data)
-				select {
-				case resultChannel <- HashResult{path, string(h.Sum(data)), err}:
+				f, err := os.Open(path)
+				if err != nil {
+					resultChannel <- HashResult{path, "", err}
+					return
 				}
+				defer f.Close()
+				h := sha256.New()
+				if _, err := io.Copy(h, f); err != nil {
+					resultChannel <- HashResult{path, "", err}
+					return
+				}
+				resultChannel <- HashResult{path, string(h.Sum(nil)), nil}
 			}()
 			select {
 			case <-done: // HL
@@ -221,8 +230,11 @@ func (g *GitSyncRunner) processFileHash(filePath string, done chan struct{}) (<-
 		go func() {
 			wg.Wait()
 			close(resultChannel)
+			close(errorChannel)
 		}()
-		errorChannel <- err
+		if err != nil {
+			errorChannel <- err
+		}
 	}()
 	return resultChannel, errorChannel
 }
@@ -238,19 +250,22 @@ func (g *GitSyncRunner) CalculateDigestForDirectory(filepath string) string {
 			g.logger.Error(fmt.Sprintf("calculate directory %s hashes timed out",
 				filepath))
 			close(doneChannel)
+
 			return ""
-		case e, _ := <-errorChannel:
-			g.logger.Error(fmt.Sprintf("failed to calculate %s hashes, error %v",
-				filepath, e))
-			close(doneChannel)
-			return ""
+		case e, ok := <- errorChannel:
+			if ok {
+				g.logger.Error(fmt.Sprintf("failed to calculate %s hashes, error %v",
+					filepath, e))
+				close(doneChannel)
+				return ""
+			}
 		case result, ok := <-resultChannel:
 			if ok {
 				if result.err != nil {
 					g.logger.Warn(fmt.Sprintf("failed to calculate file digest %s due to error %v",
 						result.path, result.err))
 				} else {
-					//we only care about hash now
+					//we only care about hash currently
 					hashes = append(hashes, result.hash)
 				}
 			} else {
@@ -260,7 +275,7 @@ func (g *GitSyncRunner) CalculateDigestForDirectory(filepath string) string {
 					filepath))
 				h := sha256.New()
 				for _, c := range hashes {
-					h.Sum([]byte(c))
+					h.Write([]byte(c))
 				}
 				return string(h.Sum(nil))
 			}

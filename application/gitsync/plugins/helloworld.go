@@ -5,6 +5,7 @@ import (
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 const RepoName = "https://github.com/TommyLike/SampleApp"
@@ -42,16 +43,18 @@ func (h *HelloWorldPlugin) GetMeta() *gitsync.PluginMeta {
 func (h *HelloWorldPlugin) Load(files map[string][]string) error {
 	if files, ok := files[RepoName]; ok {
 		if len(files) > 0 {
-			f, err := os.Open(files[0])
-			defer f.Close()
-			if err != nil {
-				return err
+			if strings.HasSuffix(files[0], RepoFile) {
+				f, err := os.Open(files[0])
+				defer f.Close()
+				if err != nil {
+					return err
+				}
+				bytes, err := ioutil.ReadAll(f)
+				if err != nil {
+					return err
+				}
+				h.content = string(bytes)
 			}
-			bytes, err := ioutil.ReadAll(f)
-			if err != nil {
-				return err
-			}
-			h.content = string(bytes)
 		}
 	}
 	return nil
