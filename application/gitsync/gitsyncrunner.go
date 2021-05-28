@@ -8,16 +8,18 @@ import (
 	"fmt"
 	"github.com/gookit/goutil/fsutil"
 	"go.uber.org/zap"
-	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
 const SyncTimeout = 60
-const SyncRetry = 3
+const DirectoryWalkTimeout = 30
 const DefaultSHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
 type GitSyncRunner struct {
@@ -31,6 +33,12 @@ type GitSyncRunner struct {
 	group           string
 	gitSyncPath     string
 	WebhookEndpoint string
+}
+
+type HashResult struct {
+	path string
+	hash string
+	err  error
 }
 
 func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel chan<- *GitEvent, interval int, logger *zap.Logger, gitSyncPath string, webhookEndpoint string) (*GitSyncRunner, error) {
@@ -138,21 +146,26 @@ func (g *GitSyncRunner) SyncRepo(ctx context.Context, onetime bool) bool {
 
 func (g *GitSyncRunner) CompareDigestAndNotify() {
 	var changedFiles []string
+	var newDigest string
+	var err error
 	for k, _ := range g.watchFiles {
 		if fsutil.IsDir(k) {
-			g.logger.Info("watch folder instead of file is not supported")
-			continue
+			newDigest = g.CalculateDigestForDirectory(k)
+			if newDigest == "" {
+				g.logger.Error(fmt.Sprintf("directory %s skipping watch", k))
+				continue
+			}
 		}
 		if fsutil.FileExist(k) {
-			newDigest, err := g.CalculateDigestForSingleFile(k)
+			newDigest, err = g.CalculateDigestForSingleFile(k)
 			if err != nil {
 				g.logger.Error(fmt.Sprintf("failed to calculate file digest, error %v. skipping watch", err))
 				continue
 			}
-			if newDigest != g.watchFiles[k] {
-				g.watchFiles[k] = newDigest
-				changedFiles = append(changedFiles, k)
-			}
+		}
+		if newDigest != g.watchFiles[k] {
+			g.watchFiles[k] = newDigest
+			changedFiles = append(changedFiles, k)
 		}
 	}
 	if len(changedFiles) != 0 {
@@ -167,17 +180,92 @@ func (g *GitSyncRunner) CompareDigestAndNotify() {
 }
 
 //TODO: support calculate folder digest: https://blog.golang.org/pipelines/parallel.go
-func (g GitSyncRunner) CalculateDigestForSingleFile(filepath string) (string, error) {
-	f, err := os.Open(filepath)
+func (g *GitSyncRunner) CalculateDigestForSingleFile(filepath string) (string, error) {
+	bs, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
+	return string(h.Sum(bs)), nil
+}
+
+func (g *GitSyncRunner) processFileHash(filePath string, done chan struct{}) (<-chan HashResult, <-chan error) {
+	resultChannel := make(chan HashResult, 20)
+	errorChannel := make(chan error, 1)
+	go func() {
+		var wg sync.WaitGroup
+		err := filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.Mode().IsRegular() {
+				return nil
+			}
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				data, err := ioutil.ReadFile(path)
+				h := sha256.New()
+				h.Sum(data)
+				select {
+				case resultChannel <- HashResult{path, string(h.Sum(data)), err}:
+				}
+			}()
+			select {
+			case <-done: // HL
+				return errors.New(fmt.Sprintf("walk directory %s canceled", filePath))
+			default:
+				return nil
+			}
+		})
+		go func() {
+			wg.Wait()
+			close(resultChannel)
+		}()
+		errorChannel <- err
+	}()
+	return resultChannel, errorChannel
+}
+
+func (g *GitSyncRunner) CalculateDigestForDirectory(filepath string) string {
+	var hashes []string
+	doneChannel := make(chan struct{})
+	resultChannel, errorChannel := g.processFileHash(filepath, doneChannel)
+	ticker := time.NewTimer(time.Duration(DirectoryWalkTimeout) * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			g.logger.Error(fmt.Sprintf("calculate directory %s hashes timed out",
+				filepath))
+			close(doneChannel)
+			return ""
+		case e, _ := <-errorChannel:
+			g.logger.Error(fmt.Sprintf("failed to calculate %s hashes, error %v",
+				filepath, e))
+			close(doneChannel)
+			return ""
+		case result, ok := <-resultChannel:
+			if ok {
+				if result.err != nil {
+					g.logger.Warn(fmt.Sprintf("failed to calculate file digest %s due to error %v",
+						result.path, result.err))
+				} else {
+					//we only care about hash now
+					hashes = append(hashes, result.hash)
+				}
+			} else {
+				//calculate result
+				sort.Strings(hashes)
+				g.logger.Info(fmt.Sprintf("%d files calculated for digesting directory %s", len(hashes),
+					filepath))
+				h := sha256.New()
+				for _, c := range hashes {
+					h.Sum([]byte(c))
+				}
+				return string(h.Sum(nil))
+			}
+		}
 	}
-	return string(h.Sum(nil)), nil
 }
 
 func (g *GitSyncRunner) StartLoop() {

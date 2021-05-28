@@ -9,6 +9,7 @@ import (
 
 const RepoName = "https://github.com/TommyLike/SampleApp"
 const RepoFile = "README.md"
+const Dockerfiles = "Dockerfiles"
 
 type HelloWorldPlugin struct {
 	content string
@@ -31,6 +32,7 @@ func (h *HelloWorldPlugin) GetMeta() *gitsync.PluginMeta {
 				Schema:     gitsync.Https,
 				WatchFiles: []string{
 					RepoFile,
+					Dockerfiles,
 				},
 			},
 		},

@@ -71,7 +71,7 @@ func handleSignals(c chan os.Signal) {
 		manager.Close()
 	}
 	//sleep and exit
-	time.Sleep(1e9 / 2)
+	time.Sleep(time.Second * 3)
 	color.Info.Println("\nGoodBye...")
 
 	os.Exit(0)
