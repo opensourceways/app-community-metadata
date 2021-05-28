@@ -31,12 +31,10 @@ func newGenericLogger() {
 	// replace
 	logFile = strings.NewReplacer(
 		"{date}", LocTime().Format("20060102"),
-		"{hostname}", Hostname,
 	).Replace(logFile)
 
 	errFile = strings.NewReplacer(
 		"{date}", LocTime().Format("20060102"),
-		"{hostname}", Hostname,
 	).Replace(errFile)
 
 	// create config

@@ -4,8 +4,8 @@ timezone = "PRC"
 httpPort = 9500
 
 [log]
-logFile = "/data/logs/{hostname}_run_application-{date}.log"
-errFile = "/data/logs/{hostname}_run_error-{date}.log"
+logFile = "/data/logs/run-application-{date}.log"
+errFile = "/data/logs/run-error-{date}.log"
 
 [cache]
 disable = true
@@ -18,4 +18,4 @@ prefix = "cache"
 syncInterval = 30
 notifyInterval = 30
 baseFolder = "/data/repos/"
-gitSyncPath = "/usr/loca/bin/git-sync"
+gitSyncPath = "/app/git-sync"
