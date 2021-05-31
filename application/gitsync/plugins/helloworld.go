@@ -45,10 +45,10 @@ func (h *HelloWorldPlugin) Load(files map[string][]string) error {
 		if len(files) > 0 {
 			if strings.HasSuffix(files[0], RepoFile) {
 				f, err := os.Open(files[0])
-				defer f.Close()
 				if err != nil {
 					return err
 				}
+				defer f.Close()
 				bytes, err := ioutil.ReadAll(f)
 				if err != nil {
 					return err

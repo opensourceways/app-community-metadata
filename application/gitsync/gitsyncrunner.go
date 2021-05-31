@@ -148,7 +148,7 @@ func (g *GitSyncRunner) CompareDigestAndNotify() {
 	var changedFiles []string
 	var newDigest string
 	var err error
-	for k, _ := range g.watchFiles {
+	for k := range g.watchFiles {
 		if fsutil.IsDir(k) {
 			newDigest = g.CalculateDigestForDirectory(k)
 			if newDigest == "" {

@@ -41,10 +41,10 @@ func (h *OpenEulerSigsPlugin) Load(files map[string][]string) error {
 	if files, ok := files[CommunityRepo]; ok {
 		if len(files) > 0 {
 			f, err := os.Open(files[0])
-			defer f.Close()
 			if err != nil {
 				return err
 			}
+			defer f.Close()
 			bytes, err := ioutil.ReadAll(f)
 			if err != nil {
 				return err
@@ -59,7 +59,7 @@ func (h *OpenEulerSigsPlugin) Load(files map[string][]string) error {
 }
 
 func (h *OpenEulerSigsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
-	group.GET("/sigs", h.ReadSigsYaml)
+	group.GET("/overview", h.ReadSigsYaml)
 }
 
 func (h *OpenEulerSigsPlugin) ReadSigsYaml(c *gin.Context) {

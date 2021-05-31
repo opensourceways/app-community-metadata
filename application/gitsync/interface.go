@@ -9,10 +9,6 @@ const (
 	Ssh   RepoSchema = "ssh"
 )
 
-const (
-	AllFiles = "*"
-)
-
 type GitEvent struct {
 	GroupName string
 	RepoName  string
