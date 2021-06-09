@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const SyncTimeout = 60
+const SyncTimeout = 180 //3 minutes at most
 const DirectoryWalkTimeout = 30
 const DefaultSHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -252,7 +252,7 @@ func (g *GitSyncRunner) CalculateDigestForDirectory(filepath string) string {
 			close(doneChannel)
 
 			return ""
-		case e, ok := <- errorChannel:
+		case e, ok := <-errorChannel:
 			if ok {
 				g.logger.Error(fmt.Sprintf("failed to calculate %s hashes, error %v",
 					filepath, e))
@@ -289,22 +289,24 @@ func (g *GitSyncRunner) StartLoop() {
 	success := g.SyncRepo(ctx, true)
 	if success {
 		g.logger.Info(fmt.Sprintf("repo [%s] successfully cloned", g.Meta.Repo))
-	}
-	g.CompareDigestAndNotify()
-	//start watching with cancel context
-	ctx, cancel := context.WithCancel(context.Background())
-	go g.SyncRepo(ctx, false)
-	for {
-		select {
-		case _, ok := <-g.CloseChannel:
-			if !ok {
-				cancel()
-				time.Sleep(2 * time.Second)
-				g.logger.Info(fmt.Sprintf("git sync runner for repo [%s] received close event, quiting..",
-					g.Meta.Repo))
-				return
+		g.CompareDigestAndNotify()
+		//start watching with cancel context
+		ctx, cancel := context.WithCancel(context.Background())
+		go g.SyncRepo(ctx, false)
+		for {
+			select {
+			case _, ok := <-g.CloseChannel:
+				if !ok {
+					cancel()
+					time.Sleep(2 * time.Second)
+					g.logger.Info(fmt.Sprintf("git sync runner for repo [%s] received close event, quiting..",
+						g.Meta.Repo))
+					return
+				}
 			}
 		}
+	} else {
+		g.logger.Error(fmt.Sprintf("repo [%s] failed to clone", g.Meta.Repo))
 	}
 }
 

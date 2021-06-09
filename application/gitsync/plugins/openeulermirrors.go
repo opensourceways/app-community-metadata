@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	"io/ioutil"
@@ -17,7 +18,7 @@ type OpenEulerMirrorsPlugin struct {
 }
 
 func NewOpenEulerMirrorsPlugin() gitsync.Plugin {
-	return &OpenEulerSigsPlugin{}
+	return &OpenEulerMirrorsPlugin{}
 }
 
 func (h *OpenEulerMirrorsPlugin) GetMeta() *gitsync.PluginMeta {
@@ -48,11 +49,11 @@ func (h *OpenEulerMirrorsPlugin) Load(files map[string][]string) error {
 				if err != nil {
 					return err
 				}
-				if !info.Mode().IsRegular(){
+				if !info.Mode().IsRegular() {
 					return nil
 				}
 
-				if strings.HasSuffix(path,".yaml") || strings.HasSuffix(path, ".yml") {
+				if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
 					f, err := os.Open(path)
 					if err != nil {
 						return err
@@ -80,9 +81,15 @@ func (h *OpenEulerMirrorsPlugin) Load(files map[string][]string) error {
 }
 
 func (h *OpenEulerMirrorsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
-	group.GET("/all", h.ReadSigsYaml)
+	group.GET("/all", h.ReadMirrorYamls)
 }
 
-func (h *OpenEulerMirrorsPlugin) ReadSigsYaml(c *gin.Context) {
-	c.Data(200, "application/json", []byte(strings.Join(h.repos, ",")))
+func (h *OpenEulerMirrorsPlugin) ReadMirrorYamls(c *gin.Context) {
+	if len(h.repos) == 0 {
+		c.Data(200, "application/json", []byte("[]"))
+	} else {
+		c.Data(200, "application/json", []byte(fmt.Sprintf("[%s]",
+			strings.Join(h.repos, ","))))
+	}
+
 }
