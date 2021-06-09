@@ -19,6 +19,10 @@ import (
 	"time"
 )
 
+const (
+	loopbackAddress = "127.0.0.1"
+)
+
 var (
 	pluginMutex      sync.RWMutex
 	pluginsContainer = map[string]*PluginContainer{}
@@ -107,13 +111,8 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 					}
 				}
 				if readyRepos == len(container.Plugin.GetMeta().Repos) {
-					//register and load files
+					//Register endpoints
 					container.Plugin.RegisterEndpoints(s.routerGroup.Group(container.Plugin.GetMeta().Group).Group(container.Plugin.GetMeta().Name))
-					err := container.Plugin.Load(map[string][]string{})
-					if err != nil {
-						s.logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
-							container.Plugin.GetMeta().Name, err))
-					}
 					go container.StartLoop()
 					container.Ready = true
 					s.logger.Info(fmt.Sprintf("plugin %s initialized.", container.Plugin.GetMeta().Name))
@@ -206,7 +205,7 @@ func PluginDetails(c *gin.Context) {
 
 func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
 	//only allowed from local
-	if c.ClientIP() != "127.0.0.1" {
+	if c.ClientIP() != loopbackAddress {
 		c.JSON(403, nil)
 		return
 	}
@@ -224,8 +223,8 @@ func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
 }
 
 func (s *SyncManager) getRepoTriggerEndpoint(group, localName string) string {
-	return fmt.Sprintf("http://127.0.0.1:%d%s/repos/%s/%s/trigger",
-		app.HttpPort, s.routerGroup.BasePath(), group, localName)
+	return fmt.Sprintf("http://$s:%d%s/repos/%s/%s/trigger",
+		loopbackAddress, app.HttpPort, s.routerGroup.BasePath(), group, localName)
 }
 
 func (s *SyncManager) Initialize() error {
