@@ -58,6 +58,7 @@ type SyncManager struct {
 	routerGroup    *gin.RouterGroup
 	gitSyncPath    string
 	validateID     int
+	enabledplugins map[string]*PluginContainer
 }
 
 func NewSyncManager(routerGroup *gin.RouterGroup) (*SyncManager, error) {
@@ -100,11 +101,31 @@ func NewSyncManager(routerGroup *gin.RouterGroup) (*SyncManager, error) {
 		events:         make(map[string]*GitEvent),
 		routerGroup:    routerGroup,
 		gitSyncPath:    gitSyncPath,
+		enabledplugins: make(map[string]*PluginContainer, len(pluginsContainer)),
 	}, nil
 }
 
+func (s *SyncManager) GetEnabledPlugins() map[string]*PluginContainer {
+	//return if initialized.
+	if len(s.enabledplugins) != 0 {
+		return s.enabledplugins
+	}
+	for name, instance := range pluginsContainer {
+		cfg := app.Config.StringMap(fmt.Sprintf("plugins.%s", name))
+		if rs, ok := cfg["enabled"]; ok {
+			enabled, _ := strconv.ParseBool(rs)
+			if !enabled {
+				s.logger.Info(fmt.Sprintf("Plugin [%s] disabled by config", name))
+				continue
+			}
+		}
+		s.enabledplugins[name] = instance
+	}
+	return s.enabledplugins
+}
+
 func (s *SyncManager) AllPluginInitialized() bool {
-	for _, container := range pluginsContainer {
+	for _, container := range s.GetEnabledPlugins() {
 		if container.Ready != true {
 			return false
 		}
@@ -116,7 +137,7 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 	defer repoMutex.Unlock()
 	repoMutex.Lock()
 	//check whether plugin container is ready to register endpoint and handle message
-	for _, container := range pluginsContainer {
+	for _, container := range s.GetEnabledPlugins() {
 		if !container.Ready {
 			//filter out mismatch router plugins
 			if event.GroupName == container.Plugin.GetMeta().Group {
@@ -146,12 +167,12 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 }
 
 func (s *SyncManager) dispatchEvents(event *GitEvent) {
-	for _, container := range pluginsContainer {
+	for _, container := range s.GetEnabledPlugins() {
 		container.Channel <- event
 	}
 }
 func (s *SyncManager) dispatchFlushEvents(event int) {
-	for _, container := range pluginsContainer {
+	for _, container := range s.GetEnabledPlugins() {
 		container.FlushChannel <- event
 	}
 }
@@ -166,15 +187,6 @@ func Register(pluginName string, plugin Plugin) {
 	defer pluginMutex.Unlock()
 	//update plugin
 	pluginsContainer[pluginName] = NewPluginContainer(plugin)
-	//update repo
-	for _, repo := range plugin.GetMeta().Repos {
-		localName := GetRepoLocalName(repo.Repo)
-		if localName == "" {
-			color.Error.Printf("failed to get local name of %s", repo.Repo)
-		}
-		updateRepoContainer(plugin.GetMeta().Group, localName, &repo)
-		color.Info.Printf("plugin %s registered to manager\n", plugin.GetMeta().Name)
-	}
 }
 
 // Update repo container to hold all repo and watch files
@@ -256,7 +268,18 @@ func (s *SyncManager) Initialize() error {
 	s.validateID = time.Now().Nanosecond()
 	s.routerGroup.GET("/plugins", PluginDetails)
 	s.routerGroup.GET("/repos/:group/:localname/trigger", s.repoUpdateNotify)
-	//initialize repo container
+	//update repo container
+	for _,plugin := range s.GetEnabledPlugins() {
+		for _, repo := range plugin.Plugin.GetMeta().Repos {
+			localName := GetRepoLocalName(repo.Repo)
+			if localName == "" {
+				color.Error.Printf("Failed to get local name of %s", repo.Repo)
+			}
+			updateRepoContainer(plugin.Plugin.GetMeta().Group, localName, &repo)
+			s.logger.Info(fmt.Sprintf("Plugin [%s] registered to manager", plugin.Plugin.GetMeta().Name))
+		}
+	}
+	//initialize repo container with runner
 	for group, metas := range repoContainer {
 		groupPath := path.Join(s.baseFolder, group)
 		for _, meta := range metas {
@@ -342,7 +365,7 @@ func (s *SyncManager) Close() {
 		}
 	}
 	//close plugin container
-	for _, plugin := range pluginsContainer {
+	for _, plugin := range s.GetEnabledPlugins() {
 		plugin.Close()
 	}
 	close(s.eventCh)

@@ -51,7 +51,13 @@ spec:
           volumeMounts:
             - mountPath: /app/repos
               name: data-volume
+            - mountPath: /app/config/app.toml
+              name: config-volume
+              subPath: app.toml
       volumes:
         - name: data-volume
           persistentVolumeClaim:
             claimName: git-repo-data
+        - name: config-volume
+          configMap:
+            name: git-metadata-config

@@ -3,6 +3,7 @@ resources:
 - deployment.yaml
 - service.yaml
 - pvc.yaml
+- config.yaml
 commonLabels:
   owner: tommylike
   app: community-metadata

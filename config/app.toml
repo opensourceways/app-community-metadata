@@ -18,3 +18,11 @@ syncInterval = 30
 notifyInterval = 30
 baseFolder = "/app/repos/"
 gitSyncPath = "/app/git-sync"
+
+[plugins]
+    [plugins.helloworld]
+    enabled = false
+    [plugin.openeulermirrors]
+    enabled = true
+    [plugin.openeulersigs]
+    enabled = true
