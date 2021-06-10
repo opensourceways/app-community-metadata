@@ -41,6 +41,7 @@ func InitServer() {
 }
 
 func Run() {
+	//NOTE: application will use loopback address 127.0.0.1 for internal usage, please don't remove 127.0.0.1 address
 	err := server.Run(fmt.Sprintf("0.0.0.0:%d", app.HttpPort))
 	if err != nil {
 		color.Error.Println(err)

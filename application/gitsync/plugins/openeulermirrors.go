@@ -22,12 +22,13 @@ import (
 	"path/filepath"
 	"sigs.k8s.io/yaml"
 	"strings"
+	"sync/atomic"
 )
 
 const InfrastructureRepo = "https://gitee.com/openeuler/infrastructure"
 
 type OpenEulerMirrorsPlugin struct {
-	repos []string
+	Repos atomic.Value
 }
 
 func NewOpenEulerMirrorsPlugin() gitsync.Plugin {
@@ -87,7 +88,7 @@ func (h *OpenEulerMirrorsPlugin) Load(files map[string][]string) error {
 			if err != nil {
 				return err
 			}
-			h.repos = mirrors
+			h.Repos.Store(mirrors)
 		}
 	}
 	return nil
@@ -98,11 +99,12 @@ func (h *OpenEulerMirrorsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 }
 
 func (h *OpenEulerMirrorsPlugin) ReadMirrorYamls(c *gin.Context) {
-	if len(h.repos) == 0 {
+	repos := h.Repos.Load()
+	if repos == nil {
 		c.Data(200, "application/json", []byte("[]"))
 	} else {
 		c.Data(200, "application/json", []byte(fmt.Sprintf("[%s]",
-			strings.Join(h.repos, ","))))
+			strings.Join(repos.([]string), ","))))
 	}
 
 }

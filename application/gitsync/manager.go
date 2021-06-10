@@ -57,6 +57,7 @@ type SyncManager struct {
 	events         map[string]*GitEvent
 	routerGroup    *gin.RouterGroup
 	gitSyncPath    string
+	validateID     int
 }
 
 func NewSyncManager(routerGroup *gin.RouterGroup) (*SyncManager, error) {
@@ -217,13 +218,15 @@ func PluginDetails(c *gin.Context) {
 }
 
 func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
+	validateID := c.Query("validateID")
 	//only allowed from local
-	if c.ClientIP() != loopbackAddress {
+	if c.ClientIP() != loopbackAddress || validateID != string(s.validateID) {
 		c.JSON(403, nil)
 		return
 	}
 	group := c.Param("group")
 	localName := c.Param("localname")
+
 	if r, ok := s.Runners[fmt.Sprintf("%s/%s", group, localName)]; ok {
 		r.RepoUpdated()
 		c.JSON(200, nil)
@@ -236,11 +239,12 @@ func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
 }
 
 func (s *SyncManager) getRepoTriggerEndpoint(group, localName string) string {
-	return fmt.Sprintf("http://$s:%d%s/repos/%s/%s/trigger",
-		loopbackAddress, app.HttpPort, s.routerGroup.BasePath(), group, localName)
+	return fmt.Sprintf("http://$s:%d%s/repos/%s/%s/trigger?validateID=%d",
+		loopbackAddress, app.HttpPort, s.routerGroup.BasePath(), group, localName, s.validateID)
 }
 
 func (s *SyncManager) Initialize() error {
+	s.validateID = time.Now().Nanosecond()
 	s.routerGroup.GET("/plugins", PluginDetails)
 	s.routerGroup.GET("/repos/:group/:localname/trigger", s.repoUpdateNotify)
 	//initialize repo container

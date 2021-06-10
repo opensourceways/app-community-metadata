@@ -19,12 +19,13 @@ import (
 	"io/ioutil"
 	"os"
 	"sigs.k8s.io/yaml"
+	"sync/atomic"
 )
 
 const CommunityRepo = "https://gitee.com/openeuler/community"
 
 type OpenEulerSigsPlugin struct {
-	sigs []byte
+	Sigs atomic.Value
 }
 
 func NewOpenEulerSigsPlugin() gitsync.Plugin {
@@ -62,10 +63,11 @@ func (h *OpenEulerSigsPlugin) Load(files map[string][]string) error {
 			if err != nil {
 				return err
 			}
-			h.sigs, err = yaml.YAMLToJSON(bytes)
+			sigs, err := yaml.YAMLToJSON(bytes)
 			if err != nil {
 				return err
 			}
+			h.Sigs.Store(sigs)
 		}
 	}
 	return nil
@@ -76,5 +78,11 @@ func (h *OpenEulerSigsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 }
 
 func (h *OpenEulerSigsPlugin) ReadSigsYaml(c *gin.Context) {
-	c.Data(200, "application/json", h.sigs)
+	sigs := h.Sigs.Load()
+	if sigs == nil {
+		c.Data(200, "application/json", []byte("[]"))
+	} else {
+		c.Data(200, "application/json", sigs.([]byte))
+	}
+
 }

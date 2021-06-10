@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"sync/atomic"
 )
 
 const RepoName = "https://github.com/TommyLike/SampleApp"
@@ -26,7 +27,7 @@ const RepoFile = "README.md"
 const Dockerfiles = "Dockerfiles"
 
 type HelloWorldPlugin struct {
-	content string
+	Content atomic.Value
 }
 
 func NewHelloWorldPlugin() gitsync.Plugin {
@@ -66,7 +67,7 @@ func (h *HelloWorldPlugin) Load(files map[string][]string) error {
 				if err != nil {
 					return err
 				}
-				h.content = string(bytes)
+				h.Content.Store(string(bytes))
 			}
 		}
 	}
@@ -78,5 +79,10 @@ func (h *HelloWorldPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 }
 
 func (h *HelloWorldPlugin) ReadmeContent(c *gin.Context) {
-	c.JSON(200, h.content)
+	content := h.Content.Load()
+	if content == nil {
+		c.JSON(200, "")
+	} else {
+		c.JSON(200, content.(string))
+	}
 }
