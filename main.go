@@ -14,6 +14,7 @@ limitations under the License.
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/gookit/color"
 	"github.com/opensourceways/app-community-metadata/app"
 	"github.com/opensourceways/app-community-metadata/application"
@@ -50,9 +51,23 @@ func main() {
 		os.Exit(1)
 	}
 	manager.StartLoop()
+	//register endpoint for readiness check
+	application.Server().GET("/ready", ReadinessHandler)
 	// init services
 	color.Info.Printf("============  Begin Running(PID: %d) ============\n", os.Getpid())
 	application.Run()
+}
+
+func ReadinessHandler(c *gin.Context) {
+	if manager.AllPluginInitialized() {
+		c.JSON(200, gin.H{
+			"ready": true,
+		})
+	} else {
+		c.JSON(503, gin.H{
+			"ready": false,
+		})
+	}
 }
 
 // listenSignals Graceful start/stop server

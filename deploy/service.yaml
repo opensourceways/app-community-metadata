@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: git-metadata
+spec:
+  ports:
+    - name: main-server
+      port: 80
+      protocol: TCP
+      targetPort: 9500
+  selector:
+    component: git-metadata-server
+  type: ClusterIP

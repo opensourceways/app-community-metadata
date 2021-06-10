@@ -103,6 +103,15 @@ func NewSyncManager(routerGroup *gin.RouterGroup) (*SyncManager, error) {
 	}, nil
 }
 
+func (s *SyncManager) AllPluginInitialized() bool {
+	for _, container := range pluginsContainer {
+		if container.Ready != true {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 	defer repoMutex.Unlock()
 	repoMutex.Lock()

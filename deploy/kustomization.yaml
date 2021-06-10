@@ -1,0 +1,12 @@
+resources:
+- namespace.yaml
+- deployment.yaml
+- service.yaml
+- pvc.yaml
+commonLabels:
+  owner: tommylike
+  app: community-metadata
+commonAnnotations:
+  email: tommylikehu@gmail.com
+namespace: git-metadata
+

@@ -22,7 +22,6 @@ import (
 func AddRoutes(r *gin.Engine) {
 	// status
 	r.GET("/health", controller.AppHealth)
-	r.GET("/status", controller.AppHealth)
 	r.GET("/ping", controller.PingPong)
 
 	// metadata
