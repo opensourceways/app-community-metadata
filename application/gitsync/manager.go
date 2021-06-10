@@ -220,7 +220,7 @@ func PluginDetails(c *gin.Context) {
 func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
 	validateID := c.Query("validateID")
 	//only allowed from local
-	if c.ClientIP() != loopbackAddress || validateID != string(s.validateID) {
+	if c.ClientIP() != loopbackAddress || validateID != strconv.Itoa(s.validateID) {
 		c.JSON(403, nil)
 		return
 	}
@@ -239,7 +239,7 @@ func (s *SyncManager) repoUpdateNotify(c *gin.Context) {
 }
 
 func (s *SyncManager) getRepoTriggerEndpoint(group, localName string) string {
-	return fmt.Sprintf("http://$s:%d%s/repos/%s/%s/trigger?validateID=%d",
+	return fmt.Sprintf("http://%s:%d%s/repos/%s/%s/trigger?validateID=%d",
 		loopbackAddress, app.HttpPort, s.routerGroup.BasePath(), group, localName, s.validateID)
 }
 

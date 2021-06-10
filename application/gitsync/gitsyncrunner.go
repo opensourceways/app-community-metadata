@@ -21,6 +21,7 @@ import (
 const SyncTimeout = 180 //3 minutes at most
 const DirectoryWalkTimeout = 30
 const DefaultSHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
+const MaxRetry = 5
 
 type GitSyncRunner struct {
 	ParentFolder    string
@@ -33,6 +34,7 @@ type GitSyncRunner struct {
 	group           string
 	gitSyncPath     string
 	WebhookEndpoint string
+	closed          bool
 }
 
 type HashResult struct {
@@ -70,6 +72,7 @@ func NewGitSyncRunner(group, parentFolder string, repo *GitMeta, eventChannel ch
 		gitSyncPath:     gitSyncPath,
 		CloseChannel:    make(chan bool, 1),
 		WebhookEndpoint: webhookEndpoint,
+		closed:          false,
 	}, nil
 }
 
@@ -284,6 +287,26 @@ func (g *GitSyncRunner) CalculateDigestForDirectory(filepath string) string {
 	}
 }
 
+func (g *GitSyncRunner) WatchSync(ctx context.Context) {
+	retry := 1
+	for {
+		if g.closed {
+			g.logger.Info(fmt.Sprintf("received cancel signal, quit git sync..."))
+			return
+		}
+		if retry <= MaxRetry {
+			g.logger.Info(fmt.Sprintf("loop perform git sync (current: %d, max: %d) for repo %s", retry,
+				MaxRetry, g.Meta.Repo))
+			success := g.SyncRepo(ctx, false)
+			if success {
+				return
+			}
+		}
+		retry += 1
+	}
+	g.logger.Fatal(fmt.Sprintf("repo [%s] failed to sync, application will exit", g.Meta.Repo))
+}
+
 func (g *GitSyncRunner) StartLoop() {
 	//first clone or update
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*SyncTimeout)
@@ -293,7 +316,7 @@ func (g *GitSyncRunner) StartLoop() {
 		g.CompareDigestAndNotify()
 		//start watching with cancel context
 		ctx, cancel := context.WithCancel(context.Background())
-		go g.SyncRepo(ctx, false)
+		go g.WatchSync(ctx)
 		for {
 			select {
 			case _, ok := <-g.CloseChannel:
@@ -312,6 +335,7 @@ func (g *GitSyncRunner) StartLoop() {
 }
 
 func (g *GitSyncRunner) Close() error {
+	g.closed = true
 	close(g.CloseChannel)
 	return nil
 }
