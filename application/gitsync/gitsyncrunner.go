@@ -15,13 +15,15 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
-const SyncTimeout = 180 //3 minutes at most
+const SyncTimeout = 300 //5 minutes at most
 const DirectoryWalkTimeout = 30
 const DefaultSHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 const MaxRetry = 5
+const MaxCalculateFiles = 100
 
 type GitSyncRunner struct {
 	ParentFolder    string
@@ -200,12 +202,19 @@ func (g *GitSyncRunner) processFileHash(filePath string, done chan struct{}) (<-
 	errorChannel := make(chan error, 1)
 	go func() {
 		var wg sync.WaitGroup
-		//TODO: Improve the performance by calculating top N files only.
+		var files = 0
+		//NOTE: Improve the performance by calculating top N files only.
 		err := filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 			if !info.Mode().IsRegular() {
+				return nil
+			}
+			files += 1
+			if files > MaxCalculateFiles {
+				g.logger.Warn(fmt.Sprintf("only %d files will be calculated for directiry digest," +
+					"rest will be skipped", MaxCalculateFiles))
 				return nil
 			}
 			wg.Add(1)
@@ -301,10 +310,14 @@ func (g *GitSyncRunner) WatchSync(ctx context.Context) {
 			if success {
 				return
 			}
+		} else {
+			break
 		}
 		retry += 1
 	}
-	g.logger.Fatal(fmt.Sprintf("repo [%s] failed to sync, application will exit", g.Meta.Repo))
+	g.logger.Error(fmt.Sprintf("repo [%s] failed to sync, application will exit, check log for detail",
+		g.Meta.Repo))
+	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 }
 
 func (g *GitSyncRunner) StartLoop() {

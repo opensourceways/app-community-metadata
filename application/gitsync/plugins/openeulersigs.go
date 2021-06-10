@@ -74,7 +74,7 @@ func (h *OpenEulerSigsPlugin) Load(files map[string][]string) error {
 }
 
 func (h *OpenEulerSigsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
-	group.GET("/overview", h.ReadSigsYaml)
+	group.GET("/all", h.ReadSigsYaml)
 }
 
 func (h *OpenEulerSigsPlugin) ReadSigsYaml(c *gin.Context) {

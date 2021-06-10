@@ -11,14 +11,23 @@ FROM k8s.gcr.io/git-sync/git-sync:v3.3.1 as gitsync
 RUN echo "git-sync prepared"
 
 FROM alpine/git:v2.30.2
-# to fix mv recoginzed option T
-RUN apk update --no-cache && apk add coreutils
-WORKDIR /app
-COPY --from=builder /app/git-metadata .
-COPY --from=gitsync /git-sync .
+ARG user=app
+ARG group=app
+ARG home=/app
+# to fix mv unrecoginzed option T
+RUN apk update --no-cache && apk add coreutils \
+ && addgroup -S ${group} && adduser -S ${user} -G ${group} -h ${home}
 
+USER ${user}
+WORKDIR ${home}
+COPY --chown=${user} --from=builder /app/git-metadata .
+COPY --chown=${user} --from=gitsync /git-sync .
 ADD ./config ./config
-VOLUME ["/data/logs","/data/repos"]
-ENV PATH="/app:${PATH}"
+#to fix the directory permission issue
+RUN mkdir -p ${home}/logs $$ -p ${home}/repos
+VOLUME ["${home}/logs","${home}/repos"]
+
+ENV PATH="${home}:${PATH}"
 ENV APP_ENV="prod"
+EXPOSE 9500
 ENTRYPOINT ["/app/git-metadata"]
