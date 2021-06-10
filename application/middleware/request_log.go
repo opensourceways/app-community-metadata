@@ -26,10 +26,10 @@ import (
 )
 
 func RequestLog() gin.HandlerFunc {
-	//skip health check endpoint
+	//skip success healthiness and readiness check endpoints
 	skip := map[string]int{
-		"/health": 1,
-		"/status": 1,
+		"/health": 200,
+		"/ready": 200,
 	}
 
 	return func(c *gin.Context) {
@@ -38,17 +38,10 @@ func RequestLog() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		reqId := strutil.Md5(fmt.Sprintf("%d", start.Nanosecond()))
 
-		// add reqID to context
-		c.Set("reqId", reqId)
+		c.Set("req_id", reqId)
 
-		// c.MustBindWith()
 		// Process request
 		c.Next()
-
-		// Log only when path is not being skipped
-		if _, ok := skip[path]; ok {
-			return
-		}
 
 		// log post/put data
 		postData := ""
@@ -57,8 +50,14 @@ func RequestLog() gin.HandlerFunc {
 			postData = string(buf)
 		}
 
+		if status_code, ok := skip[path]; ok {
+			if status_code == c.Writer.Status() {
+				return
+			}
+		}
+
 		app.Logger.Info(
-			"complete request",
+			"completed",
 			zap.String("req_id", reqId),
 			zap.Namespace("context"),
 			zap.String("req_date", start.Format("2006-01-02 15:04:05")),

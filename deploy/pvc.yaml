@@ -9,4 +9,5 @@ spec:
   resources:
     requests:
       storage: 500Gi
-  storageClassName: csi-disk-sas
+  storageClassName: ssd
+

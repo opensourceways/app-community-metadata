@@ -1,8 +1,12 @@
-apiVersion: extensions/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: git-metadata
 spec:
+  strategy:
+    # NOTE(tommylikehu): The strategy is recreate due to the multi-write issues if we running new pods while
+    # old one stays terminating.
+    type: Recreate
   replicas: 1
   selector:
     matchLabels:
@@ -13,7 +17,7 @@ spec:
         component: git-metadata-server
     spec:
       containers:
-        - image: swr.ap-southeast-4.myhuaweicloud.com/opensourceway/git-metadata:0.0.1
+        - image: swr.ap-southeast-4.myhuaweicloud.com/opensourceway/git-metadata:0.0.3
           imagePullPolicy: Always
           name: git-metadata-server
           livenessProbe:
@@ -21,14 +25,14 @@ spec:
               path: "/health"
               port: 9500
             initialDelaySeconds: 3
-            periodSeconds: 3
+            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: "/ready"
               port: 9500
             initialDelaySeconds: 40
             failureThreshold: 1
-            periodSeconds: 10
+            periodSeconds: 5
             timeoutSeconds: 10
           resources:
             requests:
@@ -43,7 +47,7 @@ spec:
               protocol: TCP
           env:
             - name: APP_ENV
-              value: "dev"
+              value: "prod"
           volumeMounts:
             - mountPath: /app/repos
               name: data-volume

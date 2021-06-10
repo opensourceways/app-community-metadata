@@ -57,7 +57,7 @@ func newGenericLogger() {
 		cfg.OutputPaths = []string{"stdout"}
 		cfg.ErrorOutputPaths = []string{"stderr"}
 		encoderCfg := zap.NewProductionEncoderConfig()
-		encoderCfg.TimeKey = "timestamp"
+		encoderCfg.TimeKey = "ts"
 		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 		cfg.EncoderConfig = encoderCfg
 	} else {
@@ -65,7 +65,7 @@ func newGenericLogger() {
 		cfg.OutputPaths = []string{"stdout", logFile}
 		cfg.ErrorOutputPaths = []string{"stderr", errFile}
 		encoderCfg := zap.NewProductionEncoderConfig()
-		encoderCfg.TimeKey = "timestamp"
+		encoderCfg.TimeKey = "ts"
 		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 		cfg.EncoderConfig = encoderCfg
 	}
