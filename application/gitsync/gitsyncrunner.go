@@ -197,6 +197,7 @@ func (g *GitSyncRunner) processFileHash(filePath string, done chan struct{}) (<-
 	errorChannel := make(chan error, 1)
 	go func() {
 		var wg sync.WaitGroup
+		//TODO: Improve the performance by calculating top N files only.
 		err := filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
