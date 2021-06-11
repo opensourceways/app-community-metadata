@@ -24,19 +24,19 @@ import (
 
 const CommunityRepo = "https://gitee.com/openeuler/community"
 
-type OpenEulerSigsPlugin struct {
+type OpenEulerCommunityPlugin struct {
 	Sigs atomic.Value
 }
 
-func NewOpenEulerSigsPlugin() gitsync.Plugin {
-	return &OpenEulerSigsPlugin{}
+func NewOpenEulerCommunityPlugin() gitsync.Plugin {
+	return &OpenEulerCommunityPlugin{}
 }
 
-func (h *OpenEulerSigsPlugin) GetMeta() *gitsync.PluginMeta {
+func (h *OpenEulerCommunityPlugin) GetMeta() *gitsync.PluginMeta {
 	return &gitsync.PluginMeta{
-		Name:        "sigs",
+		Name:        "community",
 		Group:       "openeuler",
-		Description: "get all sigs information in openEuler community",
+		Description: "get openEuler community information",
 		Repos: []gitsync.GitMeta{
 			{
 				Repo:       CommunityRepo,
@@ -51,7 +51,7 @@ func (h *OpenEulerSigsPlugin) GetMeta() *gitsync.PluginMeta {
 	}
 }
 
-func (h *OpenEulerSigsPlugin) Load(files map[string][]string) error {
+func (h *OpenEulerCommunityPlugin) Load(files map[string][]string) error {
 	if files, ok := files[CommunityRepo]; ok {
 		if len(files) > 0 {
 			f, err := os.Open(files[0])
@@ -73,11 +73,11 @@ func (h *OpenEulerSigsPlugin) Load(files map[string][]string) error {
 	return nil
 }
 
-func (h *OpenEulerSigsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
-	group.GET("/all", h.ReadSigsYaml)
+func (h *OpenEulerCommunityPlugin) RegisterEndpoints(group *gin.RouterGroup) {
+	group.GET("/sigs", h.ReadSigsYaml)
 }
 
-func (h *OpenEulerSigsPlugin) ReadSigsYaml(c *gin.Context) {
+func (h *OpenEulerCommunityPlugin) ReadSigsYaml(c *gin.Context) {
 	sigs := h.Sigs.Load()
 	if sigs == nil {
 		c.Data(200, "application/json", []byte("[]"))

@@ -30,7 +30,7 @@ spec:
             httpGet:
               path: "/ready"
               port: 9500
-            initialDelaySeconds: 40
+            initialDelaySeconds: 20
             failureThreshold: 1
             periodSeconds: 5
             timeoutSeconds: 10
@@ -54,6 +54,7 @@ spec:
             - mountPath: /app/config/app.toml
               name: config-volume
               subPath: app.toml
+      serviceAccountName: git-metadata
       volumes:
         - name: data-volume
           persistentVolumeClaim:

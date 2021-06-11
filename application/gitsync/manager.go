@@ -269,7 +269,7 @@ func (s *SyncManager) Initialize() error {
 	s.routerGroup.GET("/plugins", PluginDetails)
 	s.routerGroup.GET("/repos/:group/:localname/trigger", s.repoUpdateNotify)
 	//update repo container
-	for _,plugin := range s.GetEnabledPlugins() {
+	for _, plugin := range s.GetEnabledPlugins() {
 		for _, repo := range plugin.Plugin.GetMeta().Repos {
 			localName := GetRepoLocalName(repo.Repo)
 			if localName == "" {

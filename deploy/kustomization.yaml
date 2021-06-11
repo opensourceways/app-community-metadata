@@ -4,6 +4,7 @@ resources:
 - service.yaml
 - pvc.yaml
 - config.yaml
+- rbac.yaml
 commonLabels:
   owner: tommylike
   app: community-metadata

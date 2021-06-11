@@ -1,8 +1,8 @@
 FROM golang:alpine3.13 as builder
 
-MAINTAINER tommylike<tommylikehu@gmail.com>
+LABEL maintainer="tommylike<tommylikehu@gmail.com>"
 WORKDIR /app
-ADD . /app
+COPY . /app
 RUN go mod download
 RUN CGO_ENABLED=0 go build -o git-metadata
 
@@ -15,14 +15,14 @@ ARG user=app
 ARG group=app
 ARG home=/app
 # to fix mv unrecoginzed option T
-RUN apk update --no-cache && apk add coreutils \
+RUN apk update --no-cache && apk add coreutils=8.32-r2 \
  && addgroup -S ${group} && adduser -S ${user} -G ${group} -h ${home}
 
 USER ${user}
 WORKDIR ${home}
 COPY --chown=${user} --from=builder /app/git-metadata .
 COPY --chown=${user} --from=gitsync /git-sync .
-ADD ./config ./config
+COPY --chown=${user} ./config .
 #to fix the directory permission issue
 RUN mkdir -p ${home}/logs $$ -p ${home}/repos
 VOLUME ["${home}/logs","${home}/repos"]

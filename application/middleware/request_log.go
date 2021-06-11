@@ -29,7 +29,7 @@ func RequestLog() gin.HandlerFunc {
 	//skip success healthiness and readiness check endpoints
 	skip := map[string]int{
 		"/health": 200,
-		"/ready": 200,
+		"/ready":  200,
 	}
 
 	return func(c *gin.Context) {

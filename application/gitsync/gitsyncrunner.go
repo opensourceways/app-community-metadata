@@ -213,7 +213,7 @@ func (g *GitSyncRunner) processFileHash(filePath string, done chan struct{}) (<-
 			}
 			files += 1
 			if files > MaxCalculateFiles {
-				g.logger.Warn(fmt.Sprintf("only %d files will be calculated for directiry digest," +
+				g.logger.Warn(fmt.Sprintf("only %d files will be calculated for directiry digest,"+
 					"rest will be skipped", MaxCalculateFiles))
 				return nil
 			}
