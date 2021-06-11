@@ -15,7 +15,7 @@ ARG user=app
 ARG group=app
 ARG home=/app
 # to fix mv unrecoginzed option T
-RUN apk update --no-cache && apk add coreutils=8.32-r2 \
+RUN apk update --no-cache && apk add --no-cache coreutils=8.32-r2 \
  && addgroup -S ${group} && adduser -S ${user} -G ${group} -h ${home}
 
 USER ${user}
