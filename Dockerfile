@@ -2,7 +2,7 @@ FROM golang:alpine3.13 as builder
 
 LABEL maintainer="tommylike<tommylikehu@gmail.com>"
 WORKDIR /app
-COPY . /app
+ADD . /app
 RUN go mod download
 RUN CGO_ENABLED=0 go build -o git-metadata
 
