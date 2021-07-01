@@ -92,7 +92,6 @@ func handleSignals(c chan os.Signal) {
 
 	// sync logs
 	_ = app.Logger.Sync()
-	_ = cache.Close()
 	if manager != nil {
 		manager.Close()
 	}
