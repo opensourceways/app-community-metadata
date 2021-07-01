@@ -20,7 +20,6 @@ import (
 	"github.com/opensourceways/app-community-metadata/application"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	_ "github.com/opensourceways/app-community-metadata/application/gitsync/plugins"
-	"github.com/opensourceways/app-community-metadata/cache"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,7 +32,6 @@ var (
 
 func init() {
 	app.Bootstrap("./config")
-	cache.InitCache()
 	application.InitServer()
 }
 func main() {
