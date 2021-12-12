@@ -32,3 +32,5 @@ data:
         enabled = true
         [plugin.openeulersigs]
         enabled = true
+        [plugin.playgroundimages]
+        enabled = true

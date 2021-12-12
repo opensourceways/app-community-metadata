@@ -10,8 +10,10 @@ gitSyncPath = "/usr/loca/bin/git-sync"
 
 [plugins]
     [plugins.helloworld]
-    enabled = true
+    enabled = false
     [plugin.openeulermirrors]
-    enabled = true
+    enabled = false
     [plugin.openeulersigs]
+    enabled = false
+    [plugin.playgroundimages]
     enabled = true

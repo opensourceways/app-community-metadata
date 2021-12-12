@@ -75,8 +75,8 @@ func NewSyncManager(routerGroup *gin.RouterGroup) (*SyncManager, error) {
 	if !fsutil.FileExist(gitSyncPath) {
 		lookPath, err := exec.LookPath("git-sync")
 		if err != nil {
-			color.Error.Printf("git sync binary %s not found", lookPath)
-			return nil, errors.New("git sync binary not found")
+			color.Error.Printf("git sync binary %s not found\n", lookPath)
+			return nil, errors.New(fmt.Sprintf("git sync binary %s not found. ", lookPath))
 		}
 		gitSyncPath = lookPath
 	}

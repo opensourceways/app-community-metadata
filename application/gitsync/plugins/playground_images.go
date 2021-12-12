@@ -14,7 +14,6 @@ limitations under the License.
 package plugins
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	"io/ioutil"
@@ -100,7 +99,7 @@ func (h *PlaygoundImagesPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 
 func (h *PlaygoundImagesPlugin) ReadLXDImages(c *gin.Context) {
 	images := h.Images.Load()
-	if repos == nil {
+	if images == nil {
 		c.Data(200, "application/json", []byte(""))
 	} else {
 		c.Data(200, "application/json", []byte(images.(string)))
