@@ -102,8 +102,8 @@ func (p *PluginContainer) StartLoop() {
 					p.Logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
 						p.Plugin.GetMeta().Name, err))
 				} else {
-					p.Logger.Info(fmt.Sprintf("plugin container[%s] triggered LOAD function",
-						p.Plugin.GetMeta().Name))
+					p.Logger.Info(fmt.Sprintf("plugin container[%s] triggered LOAD function with %d file changes",
+						p.Plugin.GetMeta().Name, len(files)))
 				}
 			}
 		}

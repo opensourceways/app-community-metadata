@@ -14,6 +14,7 @@ limitations under the License.
 package plugins
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
@@ -68,28 +69,40 @@ func (h *PlaygoundMetaPlugins) GetMeta() *gitsync.PluginMeta {
 func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 	if files, ok := files[PlaygroundImages]; ok {
 		if len(files) > 0 {
+			fileInfo, err := os.Lstat(files[0])
+			if err != nil {
+				fmt.Println(fmt.Sprintf("failed to get file %s in plugin.",  err))
+				return err
+			}
+			if fileInfo.Name() == "lxd-images.yaml" {
+				imageFile, err := os.Open(files[0])
+				if err != nil {
+					return err
+				}
+				defer imageFile.Close()
+				bytes, err := ioutil.ReadAll(imageFile)
+				if err != nil {
+					return err
+				}
+				images, err := yaml.YAMLToJSON(bytes)
+				if err != nil {
+					return err
+				}
+				h.Images.Store(images)
+			} else {
+				return errors.New(fmt.Sprintf("unrecognized file %s", fileInfo.Name()))
+			}
+		}
+	}
+	if files, ok := files[PlaygroundCourses]; ok {
+		if len(files) > 0 {
 			for _, f := range files {
 				fileInfo, err := os.Lstat(f)
 				if err != nil {
 					fmt.Println(fmt.Sprintf("failed to get file %s in plugin.",  err))
 					continue
 				}
-				if fileInfo.Name() == "lxd-images.yaml" {
-					imageFile, err := os.Open(f)
-					if err != nil {
-						return err
-					}
-					defer imageFile.Close()
-					bytes, err := ioutil.ReadAll(imageFile)
-					if err != nil {
-						return err
-					}
-					images, err := yaml.YAMLToJSON(bytes)
-					if err != nil {
-						return err
-					}
-					h.Images.Store(images)
-				} else if fileInfo.Name() == "environments" {
+				if fileInfo.Name() == "environments" {
 					templates := make(map[string][]byte)
 					err := filepath.Walk(f, func(path string, info os.FileInfo, err error) error {
 						if err != nil {
@@ -109,11 +122,7 @@ func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 							if err != nil {
 								return err
 							}
-							m, err := yaml.YAMLToJSON(bytes)
-							if err != nil {
-								return err
-							}
-							templates[path] = m
+							templates[path] = bytes
 						}
 						return nil
 					})
@@ -121,6 +130,8 @@ func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 						return err
 					}
 					h.Templates.Store(templates)
+				} else {
+					return errors.New(fmt.Sprintf("unrecognized file %s", fileInfo.Name()))
 				}
 			}
 		}
@@ -144,12 +155,27 @@ func (h *PlaygoundMetaPlugins) ReadImages(c *gin.Context) {
 }
 
 func (h *PlaygoundMetaPlugins) ReadTemplates(c *gin.Context) {
-	images := h.Images.Load().(map[string][]byte)
-	if images == nil {
-		c.Data(200, "application/json", []byte(""))
+	if h.Templates.Load() == nil  {
+		c.Data(500, "text/html", []byte("server not ready"))
 	} else {
-		fmt.Println(images)
-		c.Data(200, "application/json", []byte(""))
+		templates := h.Templates.Load().(map[string][]byte)
+		fileQuery := c.Query("file")
+		if len(fileQuery) == 0 {
+			c.Data(404, "text/html", []byte("please specify 'file' parameter") )
+		} else {
+			var content []byte
+			for k, v := range templates{
+				if strings.Contains(k, fileQuery) {
+					content = v
+					break
+				}
+			}
+			if len(content) == 0 {
+				c.Data(404, "text/html", []byte(fmt.Sprintf("%s not found", fileQuery)) )
+			} else {
+				c.Data(200, "application/json", content)
+			}
+		}
 	}
 
 }
