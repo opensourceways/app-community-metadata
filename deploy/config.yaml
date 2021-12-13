@@ -25,5 +25,5 @@ data:
         enabled = true
         [plugin.openeulersigs]
         enabled = true
-        [plugin.playgroundimages]
+        [plugin.playgroundmeta]
         enabled = true

@@ -23,20 +23,21 @@ import (
 )
 
 const PlaygroundImages = "https://github.com/opensourceways/playground-images"
+const PlaygroundCourses = "https://github.com/opensourceways/playground-courses"
 
-type PlaygoundImagesPlugin struct {
+type PlaygoundMetaPlugins struct {
 	Images atomic.Value
 }
 
-func NewPlaygoundImagesPlugin() gitsync.Plugin {
-	return &PlaygoundImagesPlugin{}
+func NewPlaygoundMetaPlugin() gitsync.Plugin {
+	return &PlaygoundMetaPlugins{}
 }
 
-func (h *PlaygoundImagesPlugin) GetMeta() *gitsync.PluginMeta {
+func (h *PlaygoundMetaPlugins) GetMeta() *gitsync.PluginMeta {
 	return &gitsync.PluginMeta{
-		Name:        "playground-images",
+		Name:        "playground-meta",
 		Group:       "infrastructure",
-		Description: "get all playground images information",
+		Description: "get all playground meta information",
 		Repos: []gitsync.GitMeta{
 			{
 				Repo:       PlaygroundImages,
@@ -47,11 +48,20 @@ func (h *PlaygoundImagesPlugin) GetMeta() *gitsync.PluginMeta {
 					"deploy/lxd-images.yaml",
 				},
 			},
+			{
+				Repo:       PlaygroundCourses,
+				Branch:     "main",
+				SubModules: "recursive",
+				Schema:     gitsync.Https,
+				WatchFiles: []string{
+					"environments",
+				},
+			},
 		},
 	}
 }
 
-func (h *PlaygoundImagesPlugin) Load(files map[string][]string) error {
+func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 	if files, ok := files[PlaygroundImages]; ok {
 		if len(files) > 0 {
 			f, err := os.Open(files[0])
@@ -73,11 +83,12 @@ func (h *PlaygoundImagesPlugin) Load(files map[string][]string) error {
 	return nil
 }
 
-func (h *PlaygoundImagesPlugin) RegisterEndpoints(group *gin.RouterGroup) {
-	group.GET("/images", h.ReadLXDImages)
+func (h *PlaygoundMetaPlugins) RegisterEndpoints(group *gin.RouterGroup) {
+	group.GET("/images", h.ReadImages)
+	group.GET("/templates", h.ReadTemplates)
 }
 
-func (h *PlaygoundImagesPlugin) ReadLXDImages(c *gin.Context) {
+func (h *PlaygoundMetaPlugins) ReadImages(c *gin.Context) {
 	images := h.Images.Load()
 	if images == nil {
 		c.Data(200, "application/json", []byte(""))
@@ -86,3 +97,14 @@ func (h *PlaygoundImagesPlugin) ReadLXDImages(c *gin.Context) {
 	}
 
 }
+
+func (h *PlaygoundMetaPlugins) ReadTemplates(c *gin.Context) {
+	images := h.Images.Load()
+	if images == nil {
+		c.Data(200, "application/json", []byte(""))
+	} else {
+		c.Data(200, "application/json", images.([]byte))
+	}
+
+}
+

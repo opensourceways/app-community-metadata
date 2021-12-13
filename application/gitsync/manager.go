@@ -118,6 +118,9 @@ func (s *SyncManager) GetEnabledPlugins() map[string]*PluginContainer {
 				s.logger.Info(fmt.Sprintf("Plugin [%s] disabled by config", name))
 				continue
 			}
+		} else {
+			s.logger.Info(fmt.Sprintf("Plugin [%s] disabled by config", name))
+			continue
 		}
 		s.enabledplugins[name] = instance
 	}
@@ -190,7 +193,7 @@ func Register(pluginName string, plugin Plugin) {
 }
 
 // Update repo container to hold all repo and watch files
-func updateRepoContainer(group, localName string, repo *GitMeta) {
+func updateRepoContainer(group, localName string, repo GitMeta) {
 	r, found := repoContainer[group]
 	if found {
 		g, rfound := r[localName]
@@ -210,14 +213,14 @@ func updateRepoContainer(group, localName string, repo *GitMeta) {
 			}
 		} else {
 			r[localName] = &GitMetaContainer{
-				Meta:  repo,
+				Meta:  &repo,
 				Ready: false,
 			}
 		}
 	} else {
 		repoContainer[group] = make(map[string]*GitMetaContainer, 0)
 		repoContainer[group][localName] = &GitMetaContainer{
-			Meta:  repo,
+			Meta:  &repo,
 			Ready: false,
 		}
 	}
@@ -275,8 +278,9 @@ func (s *SyncManager) Initialize() error {
 			if localName == "" {
 				color.Error.Printf("Failed to get local name of %s", repo.Repo)
 			}
-			updateRepoContainer(plugin.Plugin.GetMeta().Group, localName, &repo)
-			s.logger.Info(fmt.Sprintf("Plugin [%s] registered to manager", plugin.Plugin.GetMeta().Name))
+			updateRepoContainer(plugin.Plugin.GetMeta().Group, localName, repo)
+			s.logger.Info(fmt.Sprintf("Plugin [%s] registered to manager %s", plugin.Plugin.GetMeta().Name,
+				localName))
 		}
 	}
 	//initialize repo container with runner
