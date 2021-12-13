@@ -14,11 +14,14 @@ limitations under the License.
 package plugins
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sigs.k8s.io/yaml"
+	"strings"
 	"sync/atomic"
 )
 
@@ -27,6 +30,7 @@ const PlaygroundCourses = "https://github.com/opensourceways/playground-courses"
 
 type PlaygoundMetaPlugins struct {
 	Images atomic.Value
+	Templates atomic.Value
 }
 
 func NewPlaygoundMetaPlugin() gitsync.Plugin {
@@ -64,20 +68,61 @@ func (h *PlaygoundMetaPlugins) GetMeta() *gitsync.PluginMeta {
 func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 	if files, ok := files[PlaygroundImages]; ok {
 		if len(files) > 0 {
-			f, err := os.Open(files[0])
-			if err != nil {
-				return err
+			for _, f := range files {
+				fileInfo, err := os.Lstat(f)
+				if err != nil {
+					fmt.Println(fmt.Sprintf("failed to get file %s in plugin.",  err))
+					continue
+				}
+				if fileInfo.Name() == "lxd-images.yaml" {
+					imageFile, err := os.Open(f)
+					if err != nil {
+						return err
+					}
+					defer imageFile.Close()
+					bytes, err := ioutil.ReadAll(imageFile)
+					if err != nil {
+						return err
+					}
+					images, err := yaml.YAMLToJSON(bytes)
+					if err != nil {
+						return err
+					}
+					h.Images.Store(images)
+				} else if fileInfo.Name() == "environments" {
+					templates := make(map[string][]byte)
+					err := filepath.Walk(f, func(path string, info os.FileInfo, err error) error {
+						if err != nil {
+							return err
+						}
+						if !info.Mode().IsRegular() {
+							return nil
+						}
+						//read all tmpl file
+						if strings.HasSuffix(path, ".tmpl") {
+							templateFile, err := os.Open(path)
+							if err != nil {
+								return err
+							}
+							defer templateFile.Close()
+							bytes, err := ioutil.ReadAll(templateFile)
+							if err != nil {
+								return err
+							}
+							m, err := yaml.YAMLToJSON(bytes)
+							if err != nil {
+								return err
+							}
+							templates[path] = m
+						}
+						return nil
+					})
+					if err != nil {
+						return err
+					}
+					h.Templates.Store(templates)
+				}
 			}
-			defer f.Close()
-			bytes, err := ioutil.ReadAll(f)
-			if err != nil {
-				return err
-			}
-			images, err := yaml.YAMLToJSON(bytes)
-			if err != nil {
-				return err
-			}
-			h.Images.Store(images)
 		}
 	}
 	return nil
@@ -99,11 +144,12 @@ func (h *PlaygoundMetaPlugins) ReadImages(c *gin.Context) {
 }
 
 func (h *PlaygoundMetaPlugins) ReadTemplates(c *gin.Context) {
-	images := h.Images.Load()
+	images := h.Images.Load().(map[string][]byte)
 	if images == nil {
 		c.Data(200, "application/json", []byte(""))
 	} else {
-		c.Data(200, "application/json", images.([]byte))
+		fmt.Println(images)
+		c.Data(200, "application/json", []byte(""))
 	}
 
 }
