@@ -12,13 +12,6 @@ data:
     logFile = "/app/logs/run-application-{date}.log"
     errFile = "/app/logs/run-error-{date}.log"
 
-    [cache]
-    disable = true
-    db = 1
-    auth = "123456"
-    server = "127.0.0.1:6379"
-    prefix = "cache"
-
     [manager]
     syncInterval = 30
     notifyInterval = 30

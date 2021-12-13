@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/gin-gonic/gin v1.7.1
-	github.com/gomodule/redigo v1.8.4
+	github.com/gomodule/redigo v1.8.4 // indirect
 	github.com/gookit/color v1.3.8
 	github.com/gookit/config/v2 v2.0.23
 	github.com/gookit/goutil v0.3.12

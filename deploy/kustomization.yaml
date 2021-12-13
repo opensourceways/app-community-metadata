@@ -11,4 +11,6 @@ commonLabels:
 commonAnnotations:
   email: tommylikehu@gmail.com
 namespace: git-metadata
-
+images:
+  - name: swr.cn-north-4.myhuaweicloud.com/opensourceway/common/git-metadata
+    newTag: c331f95a947ebb3fbd5febab2722bd7aae015be6

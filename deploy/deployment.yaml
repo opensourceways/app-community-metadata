@@ -17,7 +17,7 @@ spec:
         component: git-metadata-server
     spec:
       containers:
-        - image: swr.ap-southeast-4.myhuaweicloud.com/opensourceway/git-metadata:0.0.3
+        - image: opensourceway/git-metadata:0.0.1
           imagePullPolicy: Always
           name: git-metadata-server
           livenessProbe:

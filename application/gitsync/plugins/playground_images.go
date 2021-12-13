@@ -18,13 +18,11 @@ import (
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"sigs.k8s.io/yaml"
-	"strings"
 	"sync/atomic"
 )
 
-const PlaygroundImages = " https://github.com/opensourceways/playground-images.git"
+const PlaygroundImages = "https://github.com/opensourceways/playground-images"
 
 type PlaygoundImagesPlugin struct {
 	Images atomic.Value
@@ -42,11 +40,11 @@ func (h *PlaygoundImagesPlugin) GetMeta() *gitsync.PluginMeta {
 		Repos: []gitsync.GitMeta{
 			{
 				Repo:       PlaygroundImages,
-				Branch:     "master",
+				Branch:     "main",
 				SubModules: "recursive",
 				Schema:     gitsync.Https,
 				WatchFiles: []string{
-					"deploy",
+					"deploy/lxd-images.yaml",
 				},
 			},
 		},
@@ -54,36 +52,18 @@ func (h *PlaygoundImagesPlugin) GetMeta() *gitsync.PluginMeta {
 }
 
 func (h *PlaygoundImagesPlugin) Load(files map[string][]string) error {
-	var images string
 	if files, ok := files[PlaygroundImages]; ok {
 		if len(files) > 0 {
-			//there would be only one file possible
-			err := filepath.Walk(files[0], func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if !info.Mode().IsRegular() {
-					return nil
-				}
-
-				if strings.HasSuffix(path, "lxd-images.yaml") {
-					f, err := os.Open(path)
-					if err != nil {
-						return err
-					}
-					defer f.Close()
-					bytes, err := ioutil.ReadAll(f)
-					if err != nil {
-						return err
-					}
-					m, err := yaml.YAMLToJSON(bytes)
-					if err != nil {
-						return err
-					}
-					images = string(m)
-				}
-				return nil
-			})
+			f, err := os.Open(files[0])
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			bytes, err := ioutil.ReadAll(f)
+			if err != nil {
+				return err
+			}
+			images, err := yaml.YAMLToJSON(bytes)
 			if err != nil {
 				return err
 			}
@@ -94,7 +74,7 @@ func (h *PlaygoundImagesPlugin) Load(files map[string][]string) error {
 }
 
 func (h *PlaygoundImagesPlugin) RegisterEndpoints(group *gin.RouterGroup) {
-	group.GET("/lxd-images", h.ReadLXDImages)
+	group.GET("/images", h.ReadLXDImages)
 }
 
 func (h *PlaygoundImagesPlugin) ReadLXDImages(c *gin.Context) {
@@ -102,7 +82,7 @@ func (h *PlaygoundImagesPlugin) ReadLXDImages(c *gin.Context) {
 	if images == nil {
 		c.Data(200, "application/json", []byte(""))
 	} else {
-		c.Data(200, "application/json", []byte(images.(string)))
+		c.Data(200, "application/json", images.([]byte))
 	}
 
 }
