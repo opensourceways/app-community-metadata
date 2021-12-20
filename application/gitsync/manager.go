@@ -127,13 +127,13 @@ func (s *SyncManager) GetEnabledPlugins() map[string]*PluginContainer {
 	return s.enabledplugins
 }
 
-func (s *SyncManager) AllPluginInitialized() bool {
+func (s *SyncManager) OnePluginInitialized() bool {
 	for _, container := range s.GetEnabledPlugins() {
-		if container.Ready != true {
-			return false
+		if container.Ready == true {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {

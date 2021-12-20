@@ -314,6 +314,7 @@ func (g *GitSyncRunner) WatchSync(ctx context.Context) {
 			break
 		}
 		retry += 1
+		time.Sleep(5 * time.Second)
 	}
 	g.logger.Error(fmt.Sprintf("repo [%s] failed to sync, application will exit, check log for detail",
 		g.Meta.Repo))

@@ -57,7 +57,7 @@ func main() {
 }
 
 func ReadinessHandler(c *gin.Context) {
-	if manager.AllPluginInitialized() {
+	if manager.OnePluginInitialized() {
 		c.JSON(200, gin.H{
 			"ready": true,
 		})
