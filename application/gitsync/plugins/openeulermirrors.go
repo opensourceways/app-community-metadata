@@ -98,10 +98,6 @@ func (h *OpenEulerMirrorsPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/all", h.ReadMirrorYamls)
 }
 
-func (h *OpenEulerMirrorsPlugin) SkipRequestLogs() []gitsync.SkipLogMeta {
-	return []gitsync.SkipLogMeta{}
-}
-
 func (h *OpenEulerMirrorsPlugin) ReadMirrorYamls(c *gin.Context) {
 	repos := h.Repos.Load()
 	if repos == nil {

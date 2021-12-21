@@ -77,10 +77,6 @@ func (h *OpenEulerCommunityPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/sigs", h.ReadSigsYaml)
 }
 
-func (h *OpenEulerCommunityPlugin) SkipRequestLogs() []gitsync.SkipLogMeta {
-	return []gitsync.SkipLogMeta{}
-}
-
 func (h *OpenEulerCommunityPlugin) ReadSigsYaml(c *gin.Context) {
 	sigs := h.Sigs.Load()
 	if sigs == nil {

@@ -144,14 +144,6 @@ func (h *PlaygoundMetaPlugins) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/templates", h.ReadTemplates)
 }
 
-func (h *PlaygoundMetaPlugins) SkipRequestLogs() []gitsync.SkipLogMeta {
-	return []gitsync.SkipLogMeta{{
-		Method:     "GET",
-		Path:       "/images",
-		StatusCode: 200,
-	}}
-}
-
 func (h *PlaygoundMetaPlugins) ReadImages(c *gin.Context) {
 	images := h.Images.Load()
 	if images == nil {

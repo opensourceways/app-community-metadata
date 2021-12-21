@@ -25,9 +25,14 @@ import (
 	"go.uber.org/zap"
 )
 
-type SkipRequestLog func(method string, url string, statusCode int) bool
+func RequestLog() gin.HandlerFunc {
+	//skip success healthiness and readiness check endpoints
+	skip := map[string]int{
+		"/health": 200,
+		"/ready":  200,
+		"/v1/metadata/infrastructure/playground-meta/images": 200,
+	}
 
-func RequestLog(s SkipRequestLog) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Start timer
 		start := time.Now()
@@ -39,21 +44,17 @@ func RequestLog(s SkipRequestLog) gin.HandlerFunc {
 		// Process request
 		c.Next()
 
-		//if status_code, ok := skip[path]; ok {
-		//	if status_code == c.Writer.Status() {
-		//		return
-		//	}
-		//}
-
-		if s(c.Request.Method, path, c.Writer.Status()) {
-			return
-		}
-
 		// log post/put data
 		postData := ""
 		if c.Request.Method != "GET" {
 			buf, _ := ioutil.ReadAll(c.Request.Body)
 			postData = string(buf)
+		}
+
+		if status_code, ok := skip[path]; ok {
+			if status_code == c.Writer.Status() {
+				return
+			}
 		}
 
 		app.Logger.Info(

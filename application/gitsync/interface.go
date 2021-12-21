@@ -57,17 +57,10 @@ type PluginMeta struct {
 	Repos []GitMeta
 }
 
-type SkipLogMeta struct {
-	Method     string
-	Path       string
-	StatusCode int
-}
-
 type Plugin interface {
 	GetMeta() *PluginMeta
 	Load(files map[string][]string) error
 	RegisterEndpoints(group *gin.RouterGroup)
-	SkipRequestLogs() []SkipLogMeta
 }
 
 type EventFilter interface {
