@@ -127,24 +127,6 @@ func (s *SyncManager) GetEnabledPlugins() map[string]*PluginContainer {
 	return s.enabledplugins
 }
 
-func (s *SyncManager) GetPluginSkipLogMeta(baseUrl string) map[string][]string {
-	skipMeta := map[string][]string{}
-	for _, p := range s.GetEnabledPlugins() {
-		skips := p.Plugin.SkipRequestLogs()
-		if len(skips) != 0 {
-			baseUrl := fmt.Sprintf("%s/%s/%s",
-				strings.TrimRight(baseUrl, "/"),
-				p.Plugin.GetMeta().Group,
-				p.Plugin.GetMeta().Name)
-			for _, m := range skips {
-				skipMeta[fmt.Sprintf("%s/%s", baseUrl, strings.TrimLeft(m.Path, "/"))] = []string{
-					strings.ToUpper(m.Method), strconv.Itoa(m.StatusCode)}
-			}
-		}
-	}
-	return skipMeta
-}
-
 func (s *SyncManager) OnePluginInitialized() bool {
 	for _, container := range s.GetEnabledPlugins() {
 		if container.Ready == true {

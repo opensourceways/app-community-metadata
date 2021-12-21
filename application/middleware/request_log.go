@@ -26,7 +26,7 @@ import (
 )
 
 func RequestLog() gin.HandlerFunc {
-	//skip useless endpoint requests
+	//skip success healthiness and readiness check endpoints
 	skip := map[string]int{
 		"/health": 200,
 		"/ready":  200,
