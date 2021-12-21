@@ -20,19 +20,22 @@ import (
 	"github.com/opensourceways/app-community-metadata/application"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
 	_ "github.com/opensourceways/app-community-metadata/application/gitsync/plugins"
+	"github.com/opensourceways/app-community-metadata/application/middleware"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 )
 
 var (
-	manager *gitsync.SyncManager
+	manager        *gitsync.SyncManager
+	skipRequestLog middleware.SkipRequestLog
 )
 
 func init() {
 	app.Bootstrap("./config")
-	application.InitServer()
+	application.InitServer(skipRequestLog)
 }
 func main() {
 	listenSignals()
@@ -43,6 +46,29 @@ func main() {
 		color.Error.Printf("failed to initialize sync manager %v\n", err)
 		os.Exit(1)
 	}
+	//add request skip url
+	//skip success healthiness and readiness check endpoints
+	skips := map[string][]string{
+		"/health": {"GET", "200"},
+		"/ready":  {"GET", "200"},
+	}
+	//skip plugin ignore endpoints
+	for k, v := range manager.GetPluginSkipLogMeta("/v1/metadata") {
+		skips[k] = v
+	}
+
+	skipRequestLog = func(method string, url string, statusCode int) bool {
+		if value, ok := skips[url]; ok {
+			if value[0] == method {
+				if strconv.Itoa(statusCode) == value[1] {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	application.Server().Use(middleware.RequestLog(skipRequestLog))
 	err = manager.Initialize()
 	if err != nil {
 		color.Error.Printf("failed to start manager %v\n ", err)

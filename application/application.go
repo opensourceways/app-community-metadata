@@ -28,14 +28,12 @@ func Server() *gin.Engine {
 	return server
 }
 
-func InitServer() {
+func InitServer(s middleware.SkipRequestLog) {
 	server = gin.New()
 	//TODO: figure out why
 	if app.EnvName == app.EnvDev {
 		server.Use(gin.Logger(), gin.Recovery())
 	}
-	server.Use(middleware.RequestLog())
-
 	AddRoutes(server)
 
 }

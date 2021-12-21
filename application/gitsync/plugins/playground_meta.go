@@ -30,7 +30,7 @@ const PlaygroundImages = "https://github.com/opensourceways/playground-images"
 const PlaygroundCourses = "https://github.com/opensourceways/playground-courses"
 
 type PlaygoundMetaPlugins struct {
-	Images atomic.Value
+	Images    atomic.Value
 	Templates atomic.Value
 }
 
@@ -71,7 +71,7 @@ func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 		if len(files) > 0 {
 			fileInfo, err := os.Lstat(files[0])
 			if err != nil {
-				fmt.Println(fmt.Sprintf("failed to get file %s in plugin.",  err))
+				fmt.Println(fmt.Sprintf("failed to get file %s in plugin.", err))
 				return err
 			}
 			if fileInfo.Name() == "lxd-images.yaml" {
@@ -99,7 +99,7 @@ func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 			for _, f := range files {
 				fileInfo, err := os.Lstat(f)
 				if err != nil {
-					fmt.Println(fmt.Sprintf("failed to get file %s in plugin.",  err))
+					fmt.Println(fmt.Sprintf("failed to get file %s in plugin.", err))
 					continue
 				}
 				if fileInfo.Name() == "environments" {
@@ -144,6 +144,14 @@ func (h *PlaygoundMetaPlugins) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/templates", h.ReadTemplates)
 }
 
+func (h *PlaygoundMetaPlugins) SkipRequestLogs() []gitsync.SkipLogMeta {
+	return []gitsync.SkipLogMeta{{
+		Method:     "GET",
+		Path:       "/images",
+		StatusCode: 200,
+	}}
+}
+
 func (h *PlaygoundMetaPlugins) ReadImages(c *gin.Context) {
 	images := h.Images.Load()
 	if images == nil {
@@ -155,23 +163,23 @@ func (h *PlaygoundMetaPlugins) ReadImages(c *gin.Context) {
 }
 
 func (h *PlaygoundMetaPlugins) ReadTemplates(c *gin.Context) {
-	if h.Templates.Load() == nil  {
+	if h.Templates.Load() == nil {
 		c.Data(500, "text/html", []byte("server not ready"))
 	} else {
 		templates := h.Templates.Load().(map[string][]byte)
 		fileQuery := c.Query("file")
 		if len(fileQuery) == 0 {
-			c.Data(404, "text/html", []byte("please specify 'file' parameter") )
+			c.Data(404, "text/html", []byte("please specify 'file' parameter"))
 		} else {
 			var content []byte
-			for k, v := range templates{
+			for k, v := range templates {
 				if strings.Contains(k, fileQuery) {
 					content = v
 					break
 				}
 			}
 			if len(content) == 0 {
-				c.Data(404, "text/html", []byte(fmt.Sprintf("%s not found", fileQuery)) )
+				c.Data(404, "text/html", []byte(fmt.Sprintf("%s not found", fileQuery)))
 			} else {
 				c.Data(200, "application/json", content)
 			}
@@ -179,4 +187,3 @@ func (h *PlaygoundMetaPlugins) ReadTemplates(c *gin.Context) {
 	}
 
 }
-

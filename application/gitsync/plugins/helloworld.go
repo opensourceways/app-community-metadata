@@ -78,6 +78,10 @@ func (h *HelloWorldPlugin) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/readme", h.ReadmeContent)
 }
 
+func (h *HelloWorldPlugin) SkipRequestLogs() []gitsync.SkipLogMeta {
+	return []gitsync.SkipLogMeta{}
+}
+
 func (h *HelloWorldPlugin) ReadmeContent(c *gin.Context) {
 	content := h.Content.Load()
 	if content == nil {
