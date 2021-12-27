@@ -21,9 +21,9 @@ data:
     [plugins]
         [plugins.helloworld]
         enabled = false
-        [plugin.openeulermirrors]
-        enabled = true
-        [plugin.openeulersigs]
-        enabled = true
-        [plugin.playgroundmeta]
+        [plugins.openeulermirrors]
+        enabled = false
+        [plugins.openeulersigs]
+        enabled = false
+        [plugins.playgroundmeta]
         enabled = true

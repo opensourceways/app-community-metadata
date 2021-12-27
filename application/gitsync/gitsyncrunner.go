@@ -9,20 +9,20 @@ import (
 	"github.com/gookit/goutil/fsutil"
 	"go.uber.org/zap"
 	"io"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 )
 
 const SyncTimeout = 300 //5 minutes at most
 const DirectoryWalkTimeout = 30
 const DefaultSHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
-const MaxRetry = 5
+const MaxDelay = 5
 const MaxCalculateFiles = 100
 
 type GitSyncRunner struct {
@@ -303,22 +303,15 @@ func (g *GitSyncRunner) WatchSync(ctx context.Context) {
 			g.logger.Info(fmt.Sprintf("received cancel signal, quit git sync..."))
 			return
 		}
-		if retry <= MaxRetry {
-			g.logger.Info(fmt.Sprintf("loop perform git sync (current: %d, max: %d) for repo %s", retry,
-				MaxRetry, g.Meta.Repo))
-			success := g.SyncRepo(ctx, false)
-			if success {
-				return
-			}
-		} else {
-			break
-		}
+		g.logger.Info(fmt.Sprintf("loop perform git sync (current: %d) for repo %s", retry, g.Meta.Repo))
+		//basically it won't quit unless program fails
+		_ = g.SyncRepo(ctx, false)
+		g.logger.Error(fmt.Sprintf("repo [%s] failed to sync, application will exit, check log for detail",
+			g.Meta.Repo))
 		retry += 1
-		time.Sleep(5 * time.Second)
+		rand.Seed(time.Now().UnixNano())
+		time.Sleep(time.Duration(rand.Intn(MaxDelay)) * time.Second)
 	}
-	g.logger.Error(fmt.Sprintf("repo [%s] failed to sync, application will exit, check log for detail",
-		g.Meta.Repo))
-	syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 }
 
 func (g *GitSyncRunner) StartLoop() {
