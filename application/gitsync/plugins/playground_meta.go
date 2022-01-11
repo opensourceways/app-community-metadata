@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sigs.k8s.io/yaml"
 	"strings"
+	"sync"
 	"sync/atomic"
 )
 
@@ -30,8 +31,10 @@ const PlaygroundImages = "https://github.com/opensourceways/playground-images"
 const PlaygroundCourses = "https://github.com/opensourceways/playground-courses"
 
 type PlaygoundMetaPlugins struct {
-	Images    atomic.Value
-	Templates atomic.Value
+	Images     atomic.Value
+	Templates  atomic.Value
+	Group      *gin.RouterGroup
+	StaticOnce sync.Once
 }
 
 func NewPlaygoundMetaPlugin() gitsync.Plugin {
@@ -60,6 +63,7 @@ func (h *PlaygoundMetaPlugins) GetMeta() *gitsync.PluginMeta {
 				Schema:     gitsync.Https,
 				WatchFiles: []string{
 					"environments",
+					"courses",
 				},
 			},
 		},
@@ -130,6 +134,11 @@ func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 						return err
 					}
 					h.Templates.Store(templates)
+				} else if fileInfo.Name() == "courses" {
+					//path will not change
+					h.StaticOnce.Do(func() {
+						h.Group.Static("courses", f)
+					})
 				} else {
 					return errors.New(fmt.Sprintf("unrecognized file %s", fileInfo.Name()))
 				}
@@ -142,6 +151,7 @@ func (h *PlaygoundMetaPlugins) Load(files map[string][]string) error {
 func (h *PlaygoundMetaPlugins) RegisterEndpoints(group *gin.RouterGroup) {
 	group.GET("/images", h.ReadImages)
 	group.GET("/templates", h.ReadTemplates)
+	h.Group = group
 }
 
 func (h *PlaygoundMetaPlugins) ReadImages(c *gin.Context) {
