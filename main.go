@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	manager        *gitsync.SyncManager
+	manager *gitsync.SyncManager
 )
 
 func init() {
