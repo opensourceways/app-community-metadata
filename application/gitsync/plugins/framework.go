@@ -20,4 +20,6 @@ func init() {
 	gitsync.Register("openeulercommunity", NewOpenEulerCommunityPlugin())
 	gitsync.Register("openeulermirrors", NewOpenEulerMirrorsPlugin())
 	gitsync.Register("playgroundmeta", NewPlaygoundMetaPlugin())
+	gitsync.Register("openeulermoocstudio", NewOpenEulerMoocStudioMetaPlugins())
+	gitsync.Register("opengaussmoocstudio", NewOpenGaussMoocStudioMetaPlugins())
 }

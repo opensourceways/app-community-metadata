@@ -20,3 +20,7 @@ enabled = false
 enabled = false
 [plugins.playgroundmeta]
 enabled = true
+[plugins.openeulermoocstudio]
+enabled = true
+[plugins.opengaussmoocstudio]
+enabled = true
