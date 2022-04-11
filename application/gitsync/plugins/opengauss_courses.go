@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 )
 
-const OpenGaussMoocStudioCourses = "https://github.com/opensourceways/playground-courses"
+const OpenGaussMoocStudioCourses = "https://gitee.com/opengauss/playground-course""
 
 type OpenGaussMoocStudioMetaPlugins struct {
 	Images     atomic.Value
