@@ -67,12 +67,12 @@ func (p *PluginContainer) StartLoop() {
 		case event, ok := <-p.Channel:
 			if !ok {
 				p.Logger.Info(fmt.Sprintf(
-					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
+					"plugin container[%s/%s] received close channel event, quiting..", p.Plugin.GetMeta().Group, p.Plugin.GetMeta().Name))
 				return
 			}
 
 			if event.GroupName == p.Plugin.GetMeta().Group {
-				p.Logger.Info(fmt.Sprintf("event %v received in plugin container %s", event, p.Plugin.GetMeta().Name))
+				p.Logger.Info(fmt.Sprintf("event %v received in plugin container %s/%s", event, p.Plugin.GetMeta().Group, p.Plugin.GetMeta().Name))
 				r := GetRepo(p.Plugin.GetMeta().Repos, event.RepoName)
 				if r != nil {
 					eventCount := 0
@@ -84,26 +84,26 @@ func (p *PluginContainer) StartLoop() {
 					}
 					if eventCount != 0 {
 						p.Logger.Info(fmt.Sprintf(
-							"plugin container[%s] received git event with %d file changes",
-							p.Plugin.GetMeta().Name, eventCount))
+							"plugin container[%s/%s] received git event with %d file changes",
+							p.Plugin.GetMeta().Group, p.Plugin.GetMeta().Name, eventCount))
 					}
 				}
 			}
 		case _, ok := <-p.FlushChannel:
 			if !ok {
 				p.Logger.Info(fmt.Sprintf(
-					"plugin container[%s] received close channel event, quiting..", p.Plugin.GetMeta().Name))
+					"plugin container[%s/%s] received close channel event, quiting..", p.Plugin.GetMeta().Group, p.Plugin.GetMeta().Name))
 				return
 			}
 			files := p.FlushEvents()
 			if len(files) != 0 {
 				err := p.Plugin.Load(files)
 				if err != nil {
-					p.Logger.Error(fmt.Sprintf("plugin container[%s] triggered LOAD function with error %v",
-						p.Plugin.GetMeta().Name, err))
+					p.Logger.Error(fmt.Sprintf("plugin container[%s/%s] triggered LOAD function with error %v",
+						p.Plugin.GetMeta().Group, p.Plugin.GetMeta().Name, err))
 				} else {
-					p.Logger.Info(fmt.Sprintf("plugin container[%s] triggered LOAD function with %d file changes",
-						p.Plugin.GetMeta().Name, len(files)))
+					p.Logger.Info(fmt.Sprintf("plugin container[%s/%s] triggered LOAD function with %d file changes",
+						p.Plugin.GetMeta().Group, p.Plugin.GetMeta().Name, len(files)))
 				}
 			}
 		}

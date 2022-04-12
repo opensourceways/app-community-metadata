@@ -162,7 +162,7 @@ func (s *SyncManager) initializePluginWhenReady(event *GitEvent) {
 					container.Plugin.RegisterEndpoints(s.routerGroup.Group(container.Plugin.GetMeta().Group).Group(container.Plugin.GetMeta().Name))
 					go container.StartLoop()
 					container.Ready = true
-					s.logger.Info(fmt.Sprintf("plugin %s initialized.", container.Plugin.GetMeta().Name))
+					s.logger.Info(fmt.Sprintf("plugin %s/%s initialized.", container.Plugin.GetMeta().Group, container.Plugin.GetMeta().Name))
 				}
 			}
 		}
@@ -232,9 +232,10 @@ func PluginDetails(c *gin.Context) {
 	pluginMutex.RLock()
 	for _, p := range pluginsContainer {
 		data = append(data, map[string]string{
+			"group":       strings.ToLower(p.Plugin.GetMeta().Group),
 			"name":        strings.ToLower(p.Plugin.GetMeta().Name),
 			"ready":       strings.ToLower(strconv.FormatBool(p.Ready)),
-			"description": strings.ToLower(p.Plugin.GetMeta().Group),
+			"description": strings.ToLower(p.Plugin.GetMeta().Description),
 			//TODO:add more metadata to plugins
 		})
 	}
@@ -279,7 +280,7 @@ func (s *SyncManager) Initialize() error {
 				color.Error.Printf("Failed to get local name of %s", repo.Repo)
 			}
 			updateRepoContainer(plugin.Plugin.GetMeta().Group, localName, repo)
-			s.logger.Info(fmt.Sprintf("Plugin [%s] registered to manager %s", plugin.Plugin.GetMeta().Name,
+			s.logger.Info(fmt.Sprintf("Plugin [%s/%s] registered to manager %s", plugin.Plugin.GetMeta().Group, plugin.Plugin.GetMeta().Name,
 				localName))
 		}
 	}

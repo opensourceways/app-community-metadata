@@ -60,7 +60,7 @@ func (h *OpenGaussMoocStudioMetaPlugins) GetMeta() *gitsync.PluginMeta {
 }
 
 func (h *OpenGaussMoocStudioMetaPlugins) Load(files map[string][]string) error {
-	if files, ok := files[OpenEulerMoocStudioCourses]; ok {
+	if files, ok := files[OpenGaussMoocStudioCourses]; ok {
 		if len(files) > 0 {
 			for _, f := range files {
 				fileInfo, err := os.Lstat(f)

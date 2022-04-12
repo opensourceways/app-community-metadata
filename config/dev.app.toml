@@ -15,4 +15,8 @@ enabled = false
 [plugins.openeulersigs]
 enabled = false
 [plugins.playgroundmeta]
+enabled = false
+[plugins.openeulermoocstudio]
+enabled = true
+[plugins.opengaussmoocstudio]
 enabled = true
