@@ -42,12 +42,12 @@ func NewOpenGaussMoocStudioMetaPlugins() gitsync.Plugin {
 func (h *OpenGaussMoocStudioMetaPlugins) GetMeta() *gitsync.PluginMeta {
 	return &gitsync.PluginMeta{
 		Name:        "opengaussmoocstudio",
-		Group:       "infrastructure",
+		Group:       "opengauss",
 		Description: "get all mooc studio courses information for openGauss",
 		Repos: []gitsync.GitMeta{
 			{
 				Repo:       OpenGaussMoocStudioCourses,
-				Branch:     "main",
+				Branch:     "master",
 				SubModules: "recursive",
 				Schema:     gitsync.Https,
 				WatchFiles: []string{

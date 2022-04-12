@@ -42,7 +42,7 @@ func NewOpenEulerMoocStudioMetaPlugins() gitsync.Plugin {
 func (h *OpenEulerMoocStudioMetaPlugins) GetMeta() *gitsync.PluginMeta {
 	return &gitsync.PluginMeta{
 		Name:        "openeulermoocstudio",
-		Group:       "infrastructure",
+		Group:       "openeuler",
 		Description: "get all mooc studio courses information for openEuler",
 		Repos: []gitsync.GitMeta{
 			{
