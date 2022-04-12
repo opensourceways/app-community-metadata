@@ -41,7 +41,7 @@ func NewOpenGaussMoocStudioMetaPlugins() gitsync.Plugin {
 
 func (h *OpenGaussMoocStudioMetaPlugins) GetMeta() *gitsync.PluginMeta {
 	return &gitsync.PluginMeta{
-		Name:        "opengaussmoocstudio",
+		Name:        "moocstudio",
 		Group:       "opengauss",
 		Description: "get all mooc studio courses information for openGauss",
 		Repos: []gitsync.GitMeta{
