@@ -42,7 +42,7 @@ func (h *OpenDesignResourcesPlugins) GetMeta() *gitsync.PluginMeta {
 		Repos: []gitsync.GitMeta{
 			{
 				Repo:       OpenDesignResources,
-				Branch:     "main",
+				Branch:     "master",
 				SubModules: "recursive",
 				Schema:     gitsync.Https,
 				WatchFiles: []string{
