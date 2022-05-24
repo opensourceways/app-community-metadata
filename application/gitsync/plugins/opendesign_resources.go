@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/opensourceways/app-community-metadata/application/gitsync"
+	"net/http"
 	"os"
 	"sync/atomic"
 )
@@ -63,7 +64,7 @@ func (h *OpenDesignResourcesPlugins) Load(files map[string][]string) error {
 					continue
 				}
 				if fileInfo.Name() == "packages" {
-					h.Group.Static("packages", f)
+					h.Group.StaticFS("packages", http.Dir(f))
 				} else {
 					return errors.New(fmt.Sprintf("unrecognized file %s", fileInfo.Name()))
 				}
