@@ -20,3 +20,5 @@ enabled = false
 enabled = true
 [plugins.opengaussmoocstudio]
 enabled = true
+[plugins.openeuleropendesign]
+enabled = true

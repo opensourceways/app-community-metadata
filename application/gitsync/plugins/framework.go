@@ -22,4 +22,5 @@ func init() {
 	gitsync.Register("playgroundmeta", NewPlaygoundMetaPlugin())
 	gitsync.Register("openeulermoocstudio", NewOpenEulerMoocStudioMetaPlugins())
 	gitsync.Register("opengaussmoocstudio", NewOpenGaussMoocStudioMetaPlugins())
+	gitsync.Register("openeuleropendesign", NewOpenDesignResourcesPlugins())
 }
